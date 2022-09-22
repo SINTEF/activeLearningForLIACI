@@ -1,7 +1,7 @@
 import tensorflow as tf
-from tensorflow.keras.applications.mobilenet import MobileNet
-from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras import Sequential, optimizers
+from keras.applications.mobilenet import MobileNet
+from keras.layers import Dense, Dropout
+from keras import Sequential, optimizers
 import numpy as np
 # from tf.keras import Model
 
@@ -45,6 +45,7 @@ def model_create():
         loss = 'categorical_crossentropy',
         metrics=['acc']
         )
+    
     return model
 def run_model():
     pass
