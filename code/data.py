@@ -5,29 +5,34 @@ from tensorflow.keras.applications.mobilenet import preprocess_input
 import numpy as np
 from pycocotools.coco import COCO
 
-from nostdout import nostdout
-
 from os import getcwd
 
 from prints import printw, printe, printo, printc
 
 coco_file_path = getcwd() + '/../LIACi_dataset_pretty/coco-labels.json'
+banned_labels = ['ship_hull']
 
 def load_im(file_name):
     path = getcwd() + '/../LIACi_dataset_pretty/images/' + file_name
 
     im = load_img(path, target_size=(224,224))
     im = img_to_array(im)
-    im = np.uint8(im)
+    im = np.uint8(im)        
     im = preprocess_input(im)
 
     return im
 
 def get_cats(path=coco_file_path):
-    # with nostdout():
     c = COCO(path)
     return c.getCatIds()
 
+# returns all label names
+def get_cat_lab(path=coco_file_path):
+    c = COCO(path)
+    idx = c.getCatIds()
+    c = c.loadCats(idx)
+    return [ i['name'] for i in c if not i['name'] in banned_labels ]
+    
 def get_hot_vec(ann_objs, n_cats):
     """ returns a multi-label hot vector """
 
@@ -35,12 +40,13 @@ def get_hot_vec(ann_objs, n_cats):
 
     for a_obj in ann_objs:
         a = a_obj['category_id']
+        if a == 10:
+            continue
         hv[a-1] = 1
     return hv
         
 def load_from_coco(n_imgs=0, coco_file=coco_file_path):
         
-    # with nostdout():
     c = COCO(coco_file)
 
     if n_imgs < 1:  # Use all imgs
@@ -48,7 +54,7 @@ def load_from_coco(n_imgs=0, coco_file=coco_file_path):
     idxs = list(range(1, n_imgs + 1))
     images = []
     anns = []
-    n_cats = len(get_cats())
+    n_cats = len(get_cats())-1
 
     for idx in idxs:
         im_obj = c.loadImgs(idx)[0]
@@ -59,7 +65,7 @@ def load_from_coco(n_imgs=0, coco_file=coco_file_path):
         ann_objs = c.loadAnns(im_an)
         hv = get_hot_vec(ann_objs, n_cats)
         anns.append(hv)
-
+    
     anns = np.array(anns)
     images = np.array(images)
     printo(f'Loaded {n_imgs} images with annotations')
