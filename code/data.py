@@ -32,6 +32,13 @@ def get_cat_lab(path=coco_file_path):
     idx = c.getCatIds()
     c = c.loadCats(idx)
     return [ i['name'] for i in c if not i['name'] in banned_labels ]
+
+def shuffle_data(X,Y):
+    rs = np.random.RandomState(0)
+    rs.shuffle(X)
+    rs = np.random.RandomState(0)
+    rs.shuffle(Y)
+    return X, Y
     
 def get_hot_vec(ann_objs, n_cats):
     """ returns a multi-label hot vector """

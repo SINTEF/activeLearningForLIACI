@@ -5,6 +5,7 @@ from keras.layers import Dropout, GlobalAveragePooling2D, Conv2D, Reshape, Activ
 from keras import Sequential
 from keras.models import load_model
 from keras.optimizers import RMSprop
+from keras.metrics import BinaryAccuracy
 
 
 from math import prod
@@ -22,35 +23,31 @@ model_path = 'models/my_model'
 onnx_path = 'models/model.onnx'
 
 def summarize_diagnostics(history, epochs):
-    for h in history.history:
-        printc(h)
     e = range(1, epochs+1)
-    fig, ax, = plt.subplots(1,2)
+    f, ax, = plt.subplots(1,2)
+    f.suptitle("Loss and accuracy graphs")
     ax[0].plot(e, history.history['loss'], color='blue', label='train')
     ax[0].plot(e, history.history['val_loss'], color='orange', label='test')
     ax[0].title.set_text('Loss function')
     ax[0].set_xlabel('Epoch')
     ax[0].legend()
 
-    ax[1].plot(e, history.history['acc'], color='blue', label='train')
-    ax[1].plot(e, history.history['val_acc'], color='orange', label='test')
+    ax[1].plot(e, history.history['binary_accuracy'], color='blue', label='train')
+    ax[1].plot(e, history.history['val_binary_accuracy'], color='orange', label='test')
     ax[1].title.set_text('Accuracy')
     ax[1].set_xlabel('Epoch')
     ax[1].legend()
-    # ax[1].axhline(y=.6, color='r')
-    # plt.savefig('res.pdf')
+    f.savefig('../out_imgs/loss_acc.pdf')
     plt.show()
 
-def train(model, X, Y, batch_size=50, epochs=10, validation_split=0.2):
-
-    # X = np.reshape(X, (X.shape[0], prod(X.shape[-3:])))
+def train(model, X, Y, batch_size=50, epochs=10, v_split=0.2):
 
     history = model.fit(
         x=X,
         y=Y,
         epochs=epochs,
         batch_size=batch_size,
-        validation_split=validation_split,
+        validation_split=v_split,
     )
     return history, epochs
 
@@ -68,9 +65,7 @@ def mobilenet_create():
 
 def model_create(d_shape, n_cats=9, lr=2e-4):
 
-
     # Create my own classifier to train
-    # inp_dim = prod(d_shape[-3:])
 
     model = Sequential(name="hullifier_0.01")
 
@@ -85,7 +80,7 @@ def model_create(d_shape, n_cats=9, lr=2e-4):
     model.compile(
         optimizer = RMSprop(learning_rate=lr), # 2e-4
         loss = 'binary_crossentropy',
-        metrics=['acc']
+        metrics=[BinaryAccuracy()]
     )
     model.summary()
     
@@ -96,9 +91,7 @@ def model_create(d_shape, n_cats=9, lr=2e-4):
 def model_load(tf=True):
     if tf: 
         return load_model(model_path)
-    # return prepare(onnx.load(onnx_path))
-
-    
+    # return prepare(onnx.load(onnx_path))    
 
 def model_save(model):
     model.save(model_path)
