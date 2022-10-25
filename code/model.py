@@ -95,7 +95,7 @@ def model_load(tf=True):
 
 def model_save(model):
     model.save(model_path)
-    call(f"python3 -m tf2onnx.convert --saved-model {model_path} --output {onnx_path}", shell=True)
+    # call(f"python3 -m tf2onnx.convert --saved-model {model_path} --output {onnx_path}", shell=True)
     
 def main():
     mobilenet = mobilenet_create()

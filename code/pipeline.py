@@ -5,7 +5,13 @@ from model import mobilenet_create, model_create, model_load, model_save, summar
 import matplotlib.pyplot as plt
 from prints import printe, printw, printo, printc
 
-DEBUG = True
+DEBUG = False
+
+n_imgs = 0
+epochs = 40
+n_cats = len(get_cats())-1
+lr = 2e-4
+v_split = 0.2
 
 def choose_model(res, n_cats, lr):
     inp = input("Load saved model?:[Y] ").lower()
@@ -27,7 +33,7 @@ def choose_model(res, n_cats, lr):
 
 def train_model(model, res, Y, epochs, validation_split=0.2):
     # print(Y.shape)
-    inp = input("Do you want to train the model?:[y] ").lower()
+    inp = input("Do you want to train the model?:[Y] ").lower()
     if inp == 'y' or not inp:
         h, e = train(
             model,
@@ -74,32 +80,29 @@ def show_acc(model, X, Y):
     ax.set_yticks(l, labels=labs)
     
     f.savefig('../out_imgs/scatter_acc.pdf')
-    
-def main():
 
-    n_imgs = 0
-    epochs = 35
-    n_cats = len(get_cats())-1
-    lr = 2e-4
-    v_split = 0.2
+
+
+def main():
 
     X, Y = load_from_coco(n_imgs=n_imgs)
 
     mobilenet = mobilenet_create()
     
     X = mobilenet.predict(X) # Extract Features from mobilenet
+
     
 
     model = choose_model(X, n_cats, lr)
     h, e = train_model(model, X, Y, epochs, v_split)
-    show_acc(model, X, Y)
+    # show_acc(model, X, Y)
     summarize_diagnostics(h, e)
     
     # loss, acc = model.evaluate(test_images, test_labels, verbose=2)
     # print("Restored model, accuracy: {:5.2f}%".format(100 * acc))
 
     
-    if False and input("Save model?: ").lower() == 'y':
+    if input("Save model?:[Y] ").lower() == 'y':
         model_save(model)
         printo('model saved')
 
