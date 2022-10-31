@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.applications.mobilenet import preprocess_input
 import numpy as np
+import cv2
 from pycocotools.coco import COCO
 
 from os import getcwd
@@ -16,11 +17,19 @@ def load_im(file_name):
     path = getcwd() + '/../LIACi_dataset_pretty/images/' + file_name
 
     im = load_img(path, target_size=(224,224))
-    im = img_to_array(im)
-    im = np.uint8(im)        
-    im = preprocess_input(im)
-
+    im = pre_proc_img(im, resize=False)
     return im
+
+def pre_proc_img(im, resize=True, target_shape=(224,224)):
+
+    if resize:
+        im = cv2.resize(im, target_shape)
+
+    im = img_to_array(im)
+    im = np.uint8(im)
+    im = preprocess_input(im)
+    return im
+
 
 def get_cats(path=coco_file_path):
     c = COCO(path)

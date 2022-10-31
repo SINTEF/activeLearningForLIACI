@@ -51,6 +51,11 @@ def train(model, X, Y, batch_size=50, epochs=10, v_split=0.2):
     )
     return history, epochs
 
+def mobilenet_create_def():
+        return MobileNet(
+                    weights="imagenet", # Use ImageNet weights
+                    # include_top=False # Don't include FC-layer/classifiers
+        )
 def mobilenet_create():
     mobilenet = MobileNet(
                     weights="imagenet", # Use ImageNet weights
@@ -86,6 +91,12 @@ def model_create(d_shape, n_cats=9, lr=2e-4):
     
     
     return model
+
+def model_predict(bot, top, X):
+    X = bot.predict(X)
+    X = top.predict(X)
+    
+    return X
 
     
 def model_load(tf=True):
