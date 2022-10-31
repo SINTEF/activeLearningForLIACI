@@ -1,8 +1,0 @@
-dash
-pandas
-Pillow
-matplotlib
-keras
-tensorflow
-pycocotools
-opencv-python
