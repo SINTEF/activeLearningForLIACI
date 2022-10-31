@@ -20,7 +20,6 @@ app = Dash(__name__, external_stylesheets=external_stylesheets)
 # app.css.append_css({'external_url': 'reset.css'})
 # app.server.static_folder = ''
 
-# model = model_load()
 colors = {
     'background': '#111111',
     'text': '#7FDBFF'
@@ -32,38 +31,36 @@ app.layout = html.Div(
             dbc.CardBody(
                 id='video-card',
                 children=[
+                    html.Div(
+                        id='label-alerts',
+                        children=generate_label_alerts(),
+                        style={'display':'inline-block'},
+                    ),
                     DashPlayer(
                         id='video-player',
                         url=None,
                         # playbackRate=2.0,
                         controls=True,
                         muted = True,
-                        style={'width':'50%','display': 'inline-block'}
+                        style={'width':'50%','display': 'inline-block', 'right': '100px'}
                     ),
-                    html.Div(
-                        id='label-alerts',
-                        children=generate_label_alerts(),
-                        style={'display':'inline-block'},
+                    dcc.Graph(
+                        id="time-line", 
+                        style={'width': '50%', 
+                        'height' : '290px'
+                        },
                     ),
                     html.H5('Filename',id='video-filename'),
-                    # html.H6('Filename',id='video-filename'),
+                    dcc.Loading(
+                        id="loading",
+                        type="default",
+                        fullscreen=True,
+                        children=html.Div(id="loading-output-1", style={'display':'none'}),
+                    ),
+                    
                 ]
             )
         ),
-        html.Iframe(
-            id='timeline',
-            srcDoc=None,
-            style={'border-width': '50', 'width': '50%', 'height': '200px', 
-                # 'zoom': '0.50',
-                # '-moz-transform': 'scale(0.50)',
-                # '-moz-transform-origin': '0 0',
-                # '-o-transform': 'scale(0.50)',
-                # '-o-transform-origin': '0 0',
-                # '-webkit-transform': 'scale(0.50)',
-                # '-webkit-transform-origin': '0 0'
-                }
-        ),
-
         dcc.Upload(
             id='upload-video',
             accept='.mp4',

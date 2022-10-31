@@ -25,7 +25,7 @@ def pre_proc_img(im, resize=True, target_shape=(224,224)):
     if resize:
         im = cv2.resize(im, target_shape)
 
-    im = img_to_array(im)
+    im = np.squeeze(im)
     im = np.uint8(im)
     im = preprocess_input(im)
     return im

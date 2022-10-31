@@ -1,3 +1,4 @@
+import re
 from dash import html
 import datetime
 from dash_player import DashPlayer
@@ -12,6 +13,9 @@ from multipledispatch import dispatch
 import dash_bootstrap_components as dbc
 from tqdm import tqdm
 from mpld3 import fig_to_html
+import plotly.express as px
+
+from prints import printo
 
 
 
@@ -58,17 +62,18 @@ class AppFunc:
             start = 0
         
         frames = []
-        # self.available_frames = {}
+        self.available_frames = {}
 
+        self.vid.set(cv2.CAP_PROP_POS_FRAMES, start)
         print('Preprocessing images...')
         for i in tqdm(range(start, stop, step)):
-            self.vid.set(cv2.CAP_PROP_POS_FRAMES, i)
             succ,im = self.vid.read()
             if not succ:
                 raise Exception("Can't parse video image")
-            im = pre_proc_img(im)
+            im = pre_proc_img(im, resize=True)
             frames.append(im)
             # self.available_frames[i] = True # add functionality to not process all images
+        printo('Done pre processing...')
             
         frames = np.array(frames)
         
@@ -82,32 +87,34 @@ class AppFunc:
 
         # self.vid = cv2.VideoCapture(url)
         
-        self.vid = cv2.VideoCapture('assets/videoplayback.mp4') 
+        self.vid = cv2.VideoCapture('assets/videoplayback.mp4')
+        self.fps = self.vid.get(cv2.CAP_PROP_FPS)
+        self.duration = dur
+
         succ, image = self.vid.read()
         if not succ:
             raise Exception("Can't parse video")
 
         self.tnf = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT)) # Total number of frames
-        self.duration = dur
-        self.fps = self.tnf / dur
         
-        self.frames, self.predictions = self.predict_part(self.tnf, step=25)
+        self.frames, self.predictions = self.predict_part(self.tnf)
+        # self.frames, self.predictions = self.predict_part(self.tnf, step=50)
         
-        
-        fig, ax = plt.subplots(figsize=(10,3))
-        ax.imshow(
-            self.predictions.transpose(),
-            interpolation=None
-        )
-        
+        figaro = px.imshow(self.predictions.transpose(), aspect=100)
 
-        plt.tight_layout()
-        ax.set_xlabel('time [s]')
-        ax.set_ylabel('Labels')
-        ax.set_title('Videos classes')
+        y_ticks = np.arange(len(self.labels))
         
-                
-        return fig_to_html(fig)
+        figaro.update_layout(
+            yaxis=dict(
+                tickmode = 'array',
+                tickvals = y_ticks,
+                ticktext = self.labels,
+            ),
+            xaxis_title="frame number",
+        ).update_coloraxes(showscale=False)
+        
+        # ax.set_title('Videos classes')
+        return figaro
         
 
 
