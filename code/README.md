@@ -2,7 +2,7 @@
 
 ## Starting the web interface 
 (skip this section if server is already running)
-0. Install pipenv (venv can also be used)
+0. Install pipenv
 1. Run `pipenv install` to install all the requirements
 2. Run `pipenv shell` to enter the virtual environment shell
 3. Run `python3 app.py` to start the server 
