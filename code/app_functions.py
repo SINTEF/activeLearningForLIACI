@@ -7,7 +7,7 @@ import cv2
 from data import get_cat_lab
 import matplotlib.pyplot as plt
 from data import pre_proc_img
-from model import mobilenet_create, mobilenet_create_def, model_load, model_predict
+from model import mobilenet_create, model_load, model_predict
 from typing import overload
 from multipledispatch import dispatch
 import dash_bootstrap_components as dbc
@@ -40,7 +40,6 @@ class AppFunc:
         self.model = model_load()
         self.mb = mobilenet_create()
         self.labels = get_cat_lab()
-        # self.mbd = mobilenet_create_def()
 
         # Is set when video is uploaded
         self.frames = None
@@ -56,7 +55,7 @@ class AppFunc:
     def model_predict(self, frames):
         return model_predict(self.mb, self.model, frames)        
     
-    def predict_part(self, start, stop=None, step=1):
+    def predict_part(self, start, stop=None):
         if stop == None:
             stop = start
             start = 0
@@ -66,13 +65,14 @@ class AppFunc:
 
         self.vid.set(cv2.CAP_PROP_POS_FRAMES, start)
         print('Preprocessing images...')
-        for i in tqdm(range(start, stop, step)):
+        for i in tqdm(range(start, stop)):
             succ,im = self.vid.read()
             if not succ:
+                # break
                 raise Exception("Can't parse video image")
             im = pre_proc_img(im, resize=True)
             frames.append(im)
-            # self.available_frames[i] = True # add functionality to not process all images
+
         printo('Done pre processing...')
             
         frames = np.array(frames)

@@ -1,58 +1,45 @@
-from termios import N_MOUSE
 import numpy as np
-from data import get_cat_lab, load_from_coco, get_cats
-from model import mobilenet_create, model_create, model_load, model_save, summarize_diagnostics, train
+from data import get_cat_lab, load_from_coco, get_cats, shuffle_data
+from model import hullifier_save, summarize_diagnostics, train, hullifier_create
 import matplotlib.pyplot as plt
+from argparse import ArgumentParser, BooleanOptionalAction
 from prints import printe, printw, printo, printc
 
-DEBUG = False
-
-n_imgs = 0
-epochs = 40
-n_cats = len(get_cats())-1
-lr = 2e-4
-v_split = 0.2
-
-def choose_model(res, n_cats, lr):
-    inp = input("Load saved model?:[Y] ").lower()
-    if inp == 'y':
+def choose_model(X, n_cats, lr, v2, use_old):
+    
+    if use_old:
         try:
-            model = model_load()
+            postfix = '_v2' if v2 else '_v1'
+            model = model_load(version=postfix)
             printo("successfully loaded")
+            return model
         except:
             printe("Couldn't load model.")
-            inp = input('Do you want to exit?:[Y] ').lower()
+            inp = input('Do you want to exit?:[y] ').lower()
             if inp == 'y':
                 exit()
             
-    if inp != 'y':
-        print("Creating new model...")
-        model = model_create(res.shape, n_cats=n_cats, lr=lr)
+    print("Creating new model...")
+    model = hullifier_create(X, n_cats, lr, v2)
 
     return model
 
-def train_model(model, res, Y, epochs, validation_split=0.2):
-    # print(Y.shape)
-    inp = input("Do you want to train the model?:[Y] ").lower()
-    if inp == 'y' or not inp:
-        h, e = train(
-            model,
-            res,
-            Y,
-            epochs=epochs,
-            v_split=validation_split
-        )
-        return h, e
-        
-def predict_model(model, X):
-    result = model.predict(X)
-    return result 
+def train_model(model, res, Y, epochs, batch_size, validation_split):
+    h, e = train(
+        model,
+        res,
+        Y,
+        batch_size=batch_size,
+        epochs=epochs,
+        v_split=validation_split
+    )
+    return h, e
 
 
 def show_acc(model, X, Y):
     f, ax = plt.subplots()
     f.suptitle("Accuracy scatter plot for whole data set")
-    P = predict_model(model, X)
+    P = model.predict(X)
     P = np.where(0.5 <= P, 1, 0)
     hits = np.logical_and(P,Y).sum()
     
@@ -81,35 +68,53 @@ def show_acc(model, X, Y):
     
     f.savefig('../out_imgs/scatter_acc.pdf')
 
+def parseArgs():
+    parser = ArgumentParser()
+    parser.add_argument('-o', '--old', help='To run with old model', default=False, required=False, action=BooleanOptionalAction)
+    parser.add_argument('-n','--n_imgs', required=False, default=0)
+    parser.add_argument('-e','--epochs', required=False, default=20)
+    parser.add_argument('-bs','--batch_size', required=False, default=50)
+    parser.add_argument('-nc','--n_cats', required=False, default=len(get_cats())-1)
+    parser.add_argument('-lr','--lr', required=False, default=2e-4)
+    parser.add_argument('-vs','--v_split', required=False, default=0.1)
+    parser.add_argument('-v2','--v2', required=False, default=True)
+    parser.add_argument('-ts','--target_size', required=False, default=(224,224))
+    parser.add_argument('-tf','--transfer_learning', default=True, required=False, action=BooleanOptionalAction)
+    parser.add_argument('-ft','--fine_tuning', default=False, required=False, action=BooleanOptionalAction)
+    args = parser.parse_args()
 
+    return args
 
 def main():
-
-    X, Y = load_from_coco(n_imgs=n_imgs)
-
-    mobilenet = mobilenet_create()
+    args = parseArgs()
+    printo(args)
+    target_size = args.target_size
+    if not args.v2:
+        target_size = (224,224)
+    postfix = '_v2' if args.v2 else '_v1'
     
-    X = mobilenet.predict(X) # Extract Features from mobilenet
+
+
+    X, Y = load_from_coco(n_imgs=args.n_imgs, target_size=target_size)
+    X, Y = shuffle_data(X,Y)
 
     
+    model = choose_model(X, args.n_cats, args.lr, v2=args.v2, use_old=args.old)
 
-    model = choose_model(X, n_cats, lr)
-    h, e = train_model(model, X, Y, epochs, v_split)
-    # show_acc(model, X, Y)
-    summarize_diagnostics(h, e)
-    
+    if args.transfer_learning:
+        h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
+        summarize_diagnostics(h, e, version=postfix)
+    if args.fine_tuning:
+        for l in model.layers:
+            l.trainable = True
+        h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
+        summarize_diagnostics(h, e, version=postfix)
     # loss, acc = model.evaluate(test_images, test_labels, verbose=2)
     # print("Restored model, accuracy: {:5.2f}%".format(100 * acc))
-
     
-    if input("Save model?:[Y] ").lower() == 'y':
-        model_save(model)
+    if input("Save model?:[y] ").lower() == 'y':
+        hullifier_save(model, postfix, lr=args.lr, epochs=args.epochs, v_split=args.v_split)
         printo('model saved')
-
-    # mobilenet.summary()
-    # model.summary()
-    # rm = model.predict(res)
-    # print(rm.shape)
 
 
 if __name__ == "__main__":

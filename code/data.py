@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
-# from tensorflow import keras
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.keras.applications.mobilenet import preprocess_input
+from tensorflow.keras.preprocessing.image import load_img
 import numpy as np
 import cv2
 from pycocotools.coco import COCO
@@ -13,23 +11,28 @@ from prints import printw, printe, printo, printc
 coco_file_path = getcwd() + '/../LIACi_dataset_pretty/coco-labels.json'
 banned_labels = ['ship_hull']
 
-def load_im(file_name):
+def load_im(file_name, target_size=(224,224)):
     path = getcwd() + '/../LIACi_dataset_pretty/images/' + file_name
 
-    im = load_img(path, target_size=(224,224))
-    im = pre_proc_img(im, resize=False)
-    return im
+    if target_size:
+        im = load_img(path, target_size=target_size)
+    else:
+        im = load_img(path)
+    return np.uint8(im)
 
-def pre_proc_img(im, resize=True, target_shape=(224,224)):
-
-    if resize:
-        im = cv2.resize(im, target_shape)
-
-    im = np.squeeze(im)
+def pre_proc_img(im, target_shape=(224,224)):
     im = np.uint8(im)
-    im = preprocess_input(im)
+    printo(type(im))
+    im = cv2.resize(im, target_shape)
+    if not im.dtype == np.uint8:
+        printe(f'ERROR: dtype should be uint8, was {im.dtype}') 
+        exit()
+    if im.shape[0] == 1:
+        printe(f'ERROR: shape is not correct, was {im.shape}') 
+        exit()
+    
+    
     return im
-
 
 def get_cats(path=coco_file_path):
     c = COCO(path)
@@ -42,10 +45,10 @@ def get_cat_lab(path=coco_file_path):
     c = c.loadCats(idx)
     return [ i['name'] for i in c if not i['name'] in banned_labels ]
 
-def shuffle_data(X,Y):
-    rs = np.random.RandomState(0)
+def shuffle_data(X,Y,seed=0):
+    rs = np.random.RandomState(seed)
     rs.shuffle(X)
-    rs = np.random.RandomState(0)
+    rs = np.random.RandomState(seed)
     rs.shuffle(Y)
     return X, Y
     
@@ -61,7 +64,7 @@ def get_hot_vec(ann_objs, n_cats):
         hv[a-1] = 1
     return hv
         
-def load_from_coco(n_imgs=0, coco_file=coco_file_path):
+def load_from_coco(n_imgs=0, coco_file=coco_file_path, target_size=(224,224)):
         
     c = COCO(coco_file)
 
@@ -74,7 +77,7 @@ def load_from_coco(n_imgs=0, coco_file=coco_file_path):
 
     for idx in idxs:
         im_obj = c.loadImgs(idx)[0]
-        im = load_im(im_obj['file_name'])
+        im = load_im(im_obj['file_name'], target_size=target_size)
         images.append(im)
         
         im_an = c.getAnnIds(idx)
