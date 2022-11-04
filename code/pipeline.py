@@ -1,6 +1,6 @@
 import numpy as np
 from data import get_cat_lab, load_from_coco, get_cats, shuffle_data
-from model import hullifier_save, summarize_diagnostics, train, hullifier_create
+from model import summarize_diagnostics, train, hullifier_create, hullifier_load, hullifier_save
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser, BooleanOptionalAction
 from prints import printe, printw, printo, printc
@@ -10,7 +10,7 @@ def choose_model(X, n_cats, lr, v2, use_old):
     if use_old:
         try:
             postfix = '_v2' if v2 else '_v1'
-            model = model_load(version=postfix)
+            model = hullifier_load(version=postfix)
             printo("successfully loaded")
             return model
         except:
@@ -79,8 +79,7 @@ def parseArgs():
     parser.add_argument('-vs','--v_split', required=False, default=0.1)
     parser.add_argument('-v2','--v2', required=False, default=False)
     parser.add_argument('-ts','--target_size', required=False, default=(224,224))
-    parser.add_argument('-tf','--transfer_learning', default=True, required=False, action=BooleanOptionalAction)
-    parser.add_argument('-ft','--fine_tuning', default=False, required=False, action=BooleanOptionalAction)
+    parser.add_argument('-ft','--fine_tuning', default=True, required=False, action=BooleanOptionalAction)
     args = parser.parse_args()
 
     return args
@@ -105,15 +104,10 @@ def main():
 
 
 
-    if args.transfer_learning:
+    if args.fine_tuning:
         h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
         summarize_diagnostics(h, e, version=postfix)
 
-    if args.fine_tuning:
-        for l in model.layers:
-            l.trainable = True
-        h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
-        summarize_diagnostics(h, e, version=postfix)
         
     # loss, acc = model.evaluate(test_images, test_labels, verbose=2)
     # print("Restored model, accuracy: {:5.2f}%".format(100 * acc))

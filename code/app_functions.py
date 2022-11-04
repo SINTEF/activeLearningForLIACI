@@ -10,8 +10,10 @@ from model import hullifier_load
 import dash_bootstrap_components as dbc
 from tqdm import tqdm
 import plotly.express as px
+from base64 import b64decode
+import os
 
-from prints import printo
+from prints import printo, printe
 
 
 
@@ -35,6 +37,7 @@ class AppFunc:
     def __init__(self):
         self.model = hullifier_load(resize=False)
         self.labels = get_cat_lab()
+        self.tmp_path = 'tmp/tmp_video.avi'
 
         # Is set when video is uploaded
         self.frames = None
@@ -73,12 +76,20 @@ class AppFunc:
         predictions = np.where(0.5<=X, 1, 0)
         return frames, predictions
 
+    def tmp_file_rm(self):
+        if os.path.isfile(self.tmp_path):
+            os.remove(self.tmp_path)
+        else:
+            printe("Error: %s file not found" % self.tmp_path)
+
+    def tmp_file_save(self, url):
+        with open(self.tmp_path, "wb") as fh:
+            fh.write(b64decode(url.split(',')[1]))
 
     def create_timeline(self, url, dur):
-
-        # self.vid = cv2.VideoCapture(url) # TODO: get this to work
-        
-        self.vid = cv2.VideoCapture('assets/videoplayback.mp4')
+        self.tmp_file_save(url)
+            
+        self.vid = cv2.VideoCapture(self.tmp_path)
         self.fps = self.vid.get(cv2.CAP_PROP_FPS)
         self.duration = dur
 
@@ -88,7 +99,8 @@ class AppFunc:
 
         self.tnf = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT)) # Total number of frames
         self.frames, self.predictions = self.predict_part(self.tnf)
-                
+        self.tmp_file_rm()
+        
         figaro = px.imshow(self.predictions.transpose(), aspect=100)
         y_ticks = np.arange(len(self.labels))
         figaro.update_layout(
