@@ -6,13 +6,9 @@ import numpy as np
 import cv2
 from data import get_cat_lab
 import matplotlib.pyplot as plt
-from data import pre_proc_img
-from model import mobilenet_create, model_load, model_predict
-from typing import overload
-from multipledispatch import dispatch
+from model import hullifier_load
 import dash_bootstrap_components as dbc
 from tqdm import tqdm
-from mpld3 import fig_to_html
 import plotly.express as px
 
 from prints import printo
@@ -37,8 +33,7 @@ def generate_label_alerts():
 
 class AppFunc:
     def __init__(self):
-        self.model = model_load()
-        self.mb = mobilenet_create()
+        self.model = hullifier_load(resize=False)
         self.labels = get_cat_lab()
 
         # Is set when video is uploaded
@@ -49,11 +44,8 @@ class AppFunc:
         self.tnf = None
         self.frames = [] # np arr of all frames
         self.predictions = None
-        self.available_frames = None
         self.pif = None # previous image frame
 
-    def model_predict(self, frames):
-        return model_predict(self.mb, self.model, frames)        
     
     def predict_part(self, start, stop=None):
         if stop == None:
@@ -61,31 +53,30 @@ class AppFunc:
             start = 0
         
         frames = []
-        self.available_frames = {}
 
         self.vid.set(cv2.CAP_PROP_POS_FRAMES, start)
-        print('Preprocessing images...')
+        print('Fetching images from video...')
         for i in tqdm(range(start, stop)):
             succ,im = self.vid.read()
             if not succ:
-                # break
                 raise Exception("Can't parse video image")
-            im = pre_proc_img(im, resize=True)
+                # break
+            im = cv2.resize(im, (224,224))
             frames.append(im)
 
-        printo('Done pre processing...')
+        printo('Done fetching...')
             
         frames = np.array(frames)
         
-        print('Predicting...')
-        X = self.model_predict(frames)
+        print('Preprocessing & predicting...')
+        X = self.model.predict(frames)
         predictions = np.where(0.5<=X, 1, 0)
         return frames, predictions
 
 
     def create_timeline(self, url, dur):
 
-        # self.vid = cv2.VideoCapture(url)
+        # self.vid = cv2.VideoCapture(url) # TODO: get this to work
         
         self.vid = cv2.VideoCapture('assets/videoplayback.mp4')
         self.fps = self.vid.get(cv2.CAP_PROP_FPS)
@@ -96,14 +87,10 @@ class AppFunc:
             raise Exception("Can't parse video")
 
         self.tnf = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT)) # Total number of frames
-        
         self.frames, self.predictions = self.predict_part(self.tnf)
-        # self.frames, self.predictions = self.predict_part(self.tnf, step=50)
-        
+                
         figaro = px.imshow(self.predictions.transpose(), aspect=100)
-
         y_ticks = np.arange(len(self.labels))
-        
         figaro.update_layout(
             yaxis=dict(
                 tickmode = 'array',

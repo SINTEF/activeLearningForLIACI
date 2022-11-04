@@ -116,7 +116,7 @@ def hullifier_create(X, n_cats=9, lr=2e-4, v2=False, resize=False):
 
     hullifier = Sequential()
     hullifier.add(preproc_model_create(resize))
-    hullifier.add(aug_model_create())
+    # hullifier.add(aug_model_create())
     hullifier.add(mobilenet)
     hullifier.add(classifier)
     hullifier.compile(

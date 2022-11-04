@@ -72,12 +72,12 @@ def parseArgs():
     parser = ArgumentParser()
     parser.add_argument('-o', '--old', help='To run with old model', default=False, required=False, action=BooleanOptionalAction)
     parser.add_argument('-n','--n_imgs', required=False, default=0)
-    parser.add_argument('-e','--epochs', required=False, default=20)
+    parser.add_argument('-e','--epochs', required=False, default=25)
     parser.add_argument('-bs','--batch_size', required=False, default=50)
     parser.add_argument('-nc','--n_cats', required=False, default=len(get_cats())-1)
     parser.add_argument('-lr','--lr', required=False, default=2e-4)
     parser.add_argument('-vs','--v_split', required=False, default=0.1)
-    parser.add_argument('-v2','--v2', required=False, default=True)
+    parser.add_argument('-v2','--v2', required=False, default=False)
     parser.add_argument('-ts','--target_size', required=False, default=(224,224))
     parser.add_argument('-tf','--transfer_learning', default=True, required=False, action=BooleanOptionalAction)
     parser.add_argument('-ft','--fine_tuning', default=False, required=False, action=BooleanOptionalAction)
@@ -98,17 +98,23 @@ def main():
     X, Y = load_from_coco(n_imgs=args.n_imgs, target_size=target_size)
     X, Y = shuffle_data(X,Y)
 
-    
+    t_data = X[0]
+    t_data = t_data.reshape(1,t_data.shape[0], t_data.shape[1], t_data.shape[2])
     model = choose_model(X, args.n_cats, args.lr, v2=args.v2, use_old=args.old)
+    
+
+
 
     if args.transfer_learning:
         h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
         summarize_diagnostics(h, e, version=postfix)
+
     if args.fine_tuning:
         for l in model.layers:
             l.trainable = True
         h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
         summarize_diagnostics(h, e, version=postfix)
+        
     # loss, acc = model.evaluate(test_images, test_labels, verbose=2)
     # print("Restored model, accuracy: {:5.2f}%".format(100 * acc))
     
