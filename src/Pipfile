@@ -5,8 +5,7 @@ name = "pypi"
 
 [packages]
 dash = "*"
-pandas = "*"
-pillow = "*"
+dash-uploader = "*"
 matplotlib = "*"
 keras = "*"
 tensorflow = "*"
@@ -15,7 +14,9 @@ opencv-python = "*"
 dash-player = "*"
 dash-bootstrap-components = "*"
 tqdm = "*"
-mpld3 = "*"
+datetime = "*"
+
+kaleido = "*"
 
 [dev-packages]
 

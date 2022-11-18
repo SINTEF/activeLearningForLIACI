@@ -106,7 +106,7 @@ def main():
 
     if args.fine_tuning:
         h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
-        summarize_diagnostics(h, e, version=postfix)
+        summarize_diagnostics(h, e, lr=args.lr, v_split=args.v_split, version=postfix)
 
         
     # loss, acc = model.evaluate(test_images, test_labels, verbose=2)

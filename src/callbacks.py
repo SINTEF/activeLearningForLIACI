@@ -3,43 +3,50 @@ from dash.dependencies import Input, Output, State
 import cv2
 from prints import printe, printo
 from dash.exceptions import PreventUpdate
+from dash import dcc
 import numpy as np
-
-
-        
+import dash_uploader as du
+import base64
+from dash import html
+# from dash_extensions.snippets import send_file
+import config as cnf
+import time
 def get_callbacks(app, af):
     
     @app.callback(
         Output('video-player', 'url'),
         Output('video-filename', 'children'),
-        Input('upload-video', 'contents'),
-        State('upload-video', 'filename'),
-        prevent_initial_call=True
+        Output('time-line', 'figure'),
+        Output('loading', 'children'),
+        Input('upload-video', 'isCompleted'),
+        State('upload-video', 'fileNames'),
+        State('upload-video', 'upload_id'),
     )
-    def set_video(content, filename):
-        if not content:
+    def set_video(iscompleted, filename, upload_id):
+        if not iscompleted: 
             raise PreventUpdate("no content to update")
-        return content, filename
+        path = cnf.tmp_dir + upload_id + '/' + filename[0]        
+
+        with open(path, "rb") as videoFile:
+            video = "data:video/mp4;base64," +  base64.b64encode(videoFile.read()).decode('ascii')
+
+        timeline = af.create_timeline(path)
+
+        # return None, filename[0], timeline, ""
+        return video, filename[0], timeline, ""
 
     @app.callback(
-        Output('time-line', 'figure'),
-        Output('loading-output-1', 'children'),
-
-        Input('video-player','duration'),
-        State('video-player','url'),
+        Output("download", "data"), 
+        [Input("btn", "n_clicks")], 
+        State('time-line', 'figure'),
         prevent_initial_call=True
     )
-    def create_timeline(dur, url):
-        if not dur:
-            raise PreventUpdate("No video duration")
-        if not url:
-            raise PreventUpdate("No video URL")
-        
-        print('Creating timeline...')
-        
-        timeline_fig = af.create_timeline(url, dur)
-        printo('Timeline created')
-        return timeline_fig, ''
+    def download_fig(n_clicks, figure):
+        printo(f"n{n_clicks} and f{type(figure)}")
+        if not n_clicks or not figure:
+            raise PreventUpdate("Can't download figure right now")
+        f_path = af.get_fig_path()
+        return dcc.send_file(f_path)
         
     @app.callback(
         Output('test-h', 'children'),

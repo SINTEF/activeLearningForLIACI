@@ -33,10 +33,10 @@ def preproc_model_create(resize=False, target_size=224):
     return preproc_model 
 
 
-def summarize_diagnostics(history, epochs, version=''):
+def summarize_diagnostics(history, epochs, version='', **kwargs):
     e = range(1, epochs+1)
-    f, ax, = plt.subplots(1,2)
-    f.suptitle("Loss and accuracy graphs")
+    fig, ax, = plt.subplots(1,2)
+    fig.suptitle("Loss and accuracy graphs")
     ax[0].plot(e, history.history['loss'], color='blue', label='train')
     ax[0].plot(e, history.history['val_loss'], color='orange', label='test')
     ax[0].title.set_text('Loss function')
@@ -49,7 +49,14 @@ def summarize_diagnostics(history, epochs, version=''):
     ax[1].set_xlabel('Epoch')
     ax[1].legend()
     ax[1].set_ylim([0.75, 0.94])
-    f.savefig('../out_imgs/loss_acc'+ str(version)+ '.pdf')
+
+    params = f'_epochs-{epochs}'
+
+    for k,v in kwargs.items():
+        params += f'_{k}-{v}'
+
+    fig.savefig('../out_imgs/loss_acc'+ params+ '.pdf')
+    fig.savefig('../out_imgs/loss_acc'+ params+ '.png')
     # plt.show()
 
 def train(model, X, Y, batch_size=50, epochs=10, v_split=0.2):
