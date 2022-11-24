@@ -72,9 +72,11 @@ def train(model, X, Y, batch_size=50, epochs=10, v_split=0.2):
 
 def mobilenet_create(v2=False):
     if v2:
-        mobilenet = MobileNetV2(include_top=False)
+        # mobilenet = MobileNetV2(include_top=False)
+        mobilenet = load_model('/models/mobilenet/')
     else:
-        mobilenet = MobileNet(include_top=False) # Don't include FC-layer/classifiers)
+        # mobilenet = MobileNet(include_top=False) # Don't include FC-layer/classifiers)
+        mobilenet = load_model('/models/mobilenet_v2/')
     # mobilenet.summary()
     for l in mobilenet.layers:
         l.trainable = False
@@ -147,14 +149,17 @@ def hullifier_save(model, path, **kwargs):
     
 def main():
     # mobilenet = mobilenet_create()
-    mobilenet = mobilenet_create(
-        v2=True
-        )
-    model = model_create(
-        # (1,7,7,1024),
-        (1,7,7,1280), v2=True
-    )
-
+    # mobilenet = mobilenet_create(
+    #     v2=True
+    #     )
+    # model = model_create(
+    #     # (1,7,7,1024),
+    #     (1,7,7,1280), v2=True
+    # )
+    mb = MobileNet(include_top=False)
+    mb.save('models/mobilenet/')
+    mb = MobileNetV2(include_top=False)
+    mb.save('models/mobilenet_v2/')
     # history = model.fit()
     # -1.107 mm Is good 
     # - 1.102 mm 
