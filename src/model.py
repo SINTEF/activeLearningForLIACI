@@ -1,12 +1,12 @@
 from tensorflow import keras
-from keras.applications.mobilenet_v2 import MobileNetV2
-from keras.applications.mobilenet import MobileNet
+from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2
+from tensorflow.keras.applications.mobilenet import MobileNet
 
-from keras.layers import Dropout, GlobalAveragePooling2D, Conv2D, Reshape, Activation, Dense, Resizing, Rescaling, RandomFlip, RandomRotation
-from keras import Sequential
-from keras.models import load_model
-from keras.optimizers import RMSprop
-from keras.metrics import BinaryAccuracy
+from tensorflow.keras.layers import Dropout, GlobalAveragePooling2D, Conv2D, Reshape, Activation, Dense, Resizing, Rescaling, RandomFlip, RandomRotation
+from tensorflow.keras import Sequential
+from tensorflow.keras.models import load_model
+from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.metrics import BinaryAccuracy
 
 
 import numpy as np
@@ -33,7 +33,7 @@ def preproc_model_create(resize=False, target_size=224):
     return preproc_model 
 
 
-def summarize_diagnostics(history, epochs, version='', **kwargs):
+def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs):
     e = range(1, epochs+1)
     fig, ax, = plt.subplots(1,2)
     fig.suptitle("Loss and accuracy graphs")
@@ -55,8 +55,8 @@ def summarize_diagnostics(history, epochs, version='', **kwargs):
     for k,v in kwargs.items():
         params += f'_{k}-{v}'
 
-    fig.savefig('../out_imgs/loss_acc'+ params+ '.pdf')
-    fig.savefig('../out_imgs/loss_acc'+ params+ '.png')
+    fig.savefig(path+ params+ '.pdf')
+    fig.savefig(path+ params+ '.png')
     # plt.show()
 
 def train(model, X, Y, batch_size=50, epochs=10, v_split=0.2):
@@ -85,7 +85,7 @@ def model_create(d_shape, n_cats=9, v2=False):
         model = Sequential(name="hullifier_0.02")
 
         model.add(GlobalAveragePooling2D())
-        model.add(Dense(n_cats, activation='softmax'))
+        model.add(Dense(n_cats, activation='sigmoid'))
         
     else:
         # Create my own classifier to train
@@ -123,7 +123,7 @@ def hullifier_create(X, n_cats=9, lr=2e-4, v2=False, resize=False):
 
     hullifier = Sequential()
     hullifier.add(preproc_model_create(resize))
-    # hullifier.add(aug_model_create())
+    hullifier.add(aug_model_create())
     hullifier.add(mobilenet)
     hullifier.add(classifier)
     hullifier.compile(
@@ -134,14 +134,14 @@ def hullifier_create(X, n_cats=9, lr=2e-4, v2=False, resize=False):
     return hullifier
 
 
-def hullifier_save(model, postfix, **kwargs):
-    model.save(model_path + postfix)
+def hullifier_save(model, path, **kwargs):
+    model.save(path)
     params = f'\n'
 
     for k,v in kwargs.items():
         params += f'\n{k} = {v}'
 
-    with open(model_path + postfix + '/params.txt', 'w+') as f:
+    with open(path + '/params.txt', 'w+') as f:
         f.write(params) 
     
     

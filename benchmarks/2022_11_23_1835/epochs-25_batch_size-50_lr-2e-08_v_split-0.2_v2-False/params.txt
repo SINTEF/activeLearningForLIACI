@@ -1,0 +1,6 @@
+
+
+lr = 2e-08
+epochs = 25
+v_split = 0.2
+v2 = True

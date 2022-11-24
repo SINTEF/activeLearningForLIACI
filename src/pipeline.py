@@ -36,15 +36,17 @@ def train_model(model, res, Y, epochs, batch_size, validation_split):
     return h, e
 
 
-def show_acc(model, X, Y):
-    f, ax = plt.subplots()
-    f.suptitle("Accuracy scatter plot for whole data set")
+def show_acc(model, X, Y, thresh=0.5):
     P = model.predict(X)
-    P = np.where(0.5 <= P, 1, 0)
+    P = np.where(thresh <= P, 1, 0)
+
     hits = np.logical_and(P,Y).sum()
     
     n_err = int((Y).sum() - hits) + ((P).sum() - hits) 
     n_guesses = np.logical_or(P,Y).sum()
+
+    f, ax = plt.subplots()
+    f.suptitle("Accuracy scatter plot for whole data set")
     print(f"Accuracy: {n_guesses-n_err}/{n_guesses}={np.round(((n_guesses-n_err)/n_guesses)*100,2)}% (based on amount of total guesses)")# I think this is correct
 
     d = model.evaluate(X,Y)
@@ -70,51 +72,60 @@ def show_acc(model, X, Y):
 
 def parseArgs():
     parser = ArgumentParser()
+
+    parser.add_argument('-e','--epochs', required=False, default=25, type=int)
+    parser.add_argument('-bs','--batch_size', required=False, default=50, type=int)
+    parser.add_argument('-lr','--lr', required=False, default=2e-4, type=float)
+    parser.add_argument('-vs','--v_split', required=False, default=0.1, type=float)
+    parser.add_argument('-s','--seed', required=False, default=0, type=int)
+
+    parser.add_argument('-p', '--path', help='path to output files', default='', required=False)
+    parser.add_argument('-so', '--save_option', default='', required=False)
+
     parser.add_argument('-o', '--old', help='To run with old model', default=False, required=False, action=BooleanOptionalAction)
-    parser.add_argument('-n','--n_imgs', required=False, default=0)
-    parser.add_argument('-e','--epochs', required=False, default=25)
-    parser.add_argument('-bs','--batch_size', required=False, default=50)
-    parser.add_argument('-nc','--n_cats', required=False, default=len(get_cats())-1)
-    parser.add_argument('-lr','--lr', required=False, default=2e-4)
-    parser.add_argument('-vs','--v_split', required=False, default=0.1)
-    parser.add_argument('-v2','--v2', required=False, default=False)
+    parser.add_argument('-n','--n_imgs', required=False, default=0, type=int)
+    parser.add_argument('-nc','--n_cats', required=False, default=len(get_cats())-1, type=int)
+    parser.add_argument('-v2','--version_2', required=False, default=False, type=bool)
     parser.add_argument('-ts','--target_size', required=False, default=(224,224))
-    parser.add_argument('-ft','--fine_tuning', default=True, required=False, action=BooleanOptionalAction)
+    parser.add_argument('-tl','--transfer_learning', required=False, default=True, action=BooleanOptionalAction)
     args = parser.parse_args()
 
     return args
 
 def main():
     args = parseArgs()
-    printo(args)
+    printo(str(args)[10:][:-1])
+    # exit()
     target_size = args.target_size
-    if not args.v2:
+    if not args.version_2:
         target_size = (224,224)
-    postfix = '_v2' if args.v2 else '_v1'
+    postfix = '_v2' if args.version_2 else '_v1'
     
 
 
     X, Y = load_from_coco(n_imgs=args.n_imgs, target_size=target_size)
-    X, Y = shuffle_data(X,Y)
-
+    print(X.shape)
+    X, Y = shuffle_data(X,Y,seed=args.seed)
+    print(X.shape)
+    exit()
     t_data = X[0]
     t_data = t_data.reshape(1,t_data.shape[0], t_data.shape[1], t_data.shape[2])
-    model = choose_model(X, args.n_cats, args.lr, v2=args.v2, use_old=args.old)
+    model = choose_model(X, args.n_cats, args.lr, v2=args.version_2, use_old=args.old)
     
 
 
 
-    if args.fine_tuning:
+    if args.transfer_learning:
         h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
-        summarize_diagnostics(h, e, lr=args.lr, v_split=args.v_split, version=postfix)
+        summarize_diagnostics(h, e, args.path,  lr=args.lr, v_split=args.v_split, version=postfix)
 
         
     # loss, acc = model.evaluate(test_images, test_labels, verbose=2)
     # print("Restored model, accuracy: {:5.2f}%".format(100 * acc))
     
-    if input("Save model?:[y] ").lower() == 'y':
-        hullifier_save(model, postfix, lr=args.lr, epochs=args.epochs, v_split=args.v_split)
-        printo('model saved')
+    if args.save_option == 'y' or input("Save model?:[y] ").lower() == 'y':
+        hullifier_save(model, args.path + 'model/', lr=args.lr, epochs=args.epochs, v_split=args.v_split, v2=args.version_2)
+        printo(f'model saved to {args.path}')
 
 
 if __name__ == "__main__":
