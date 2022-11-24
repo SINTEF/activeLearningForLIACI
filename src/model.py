@@ -50,7 +50,7 @@ def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs
     ax[1].legend()
     ax[1].set_ylim([0.75, 0.94])
 
-    params = f'_epochs-{epochs}'
+    params = f'graph_epochs-{epochs}'
 
     for k,v in kwargs.items():
         params += f'_{k}-{v}'
@@ -72,11 +72,11 @@ def train(model, X, Y, batch_size=50, epochs=10, v_split=0.2):
 
 def mobilenet_create(v2=False):
     if v2:
-        # mobilenet = MobileNetV2(include_top=False)
-        mobilenet = load_model('/models/mobilenet/')
+        mobilenet = MobileNetV2(include_top=False)
+        # mobilenet = load_model('/models/mobilenet/')
     else:
-        # mobilenet = MobileNet(include_top=False) # Don't include FC-layer/classifiers)
-        mobilenet = load_model('/models/mobilenet_v2/')
+        mobilenet = MobileNet(include_top=False) # Don't include FC-layer/classifiers)
+        # mobilenet = load_model('/models/mobilenet_v2/')
     # mobilenet.summary()
     for l in mobilenet.layers:
         l.trainable = False
