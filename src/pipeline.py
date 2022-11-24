@@ -92,40 +92,40 @@ def parseArgs():
 
     return args
 
+
 def main():
     args = parseArgs()
-    printo(str(args)[10:][:-1])
+    # printo(str(args)[10:][:-1])
+    pipeline_start(epochs=args.epochs, batch_size=args.batch_size, lr=args.lr, v_split=args.v_split, seed=args.seed, n_imgs=args.n_imgs, n_cats=args.n_cats, version_2=args.version_2, target_size=args.target_size, transfer_learning=args.transfer_learning)
+
+def pipeline_start(n_imgs=0, n_cats=9, old=False, transfer_learning=True, version_2=False, epochs=1, batch_size=50, v_split=0.1, seed=0, lr=2e-4, path='../benchmark', save_option='', **kwargs):
     # exit()
-    target_size = args.target_size
-    if not args.version_2:
-        target_size = (224,224)
-    postfix = '_v2' if args.version_2 else '_v1'
+    target_size = (224, 224)    
+    if not version_2:
+        postfix = '_v2' if version_2 else '_v1'
     
 
 
-    X, Y = load_from_coco(n_imgs=args.n_imgs, target_size=target_size)
-    print(X.shape)
-    X, Y = shuffle_data(X,Y,seed=args.seed)
-    print(X.shape)
-    exit()
+    X, Y = load_from_coco(n_imgs=n_imgs, target_size=target_size)
+    X, Y = shuffle_data(X,Y,seed=seed)
     t_data = X[0]
     t_data = t_data.reshape(1,t_data.shape[0], t_data.shape[1], t_data.shape[2])
-    model = choose_model(X, args.n_cats, args.lr, v2=args.version_2, use_old=args.old)
+    model = choose_model(X, n_cats, lr, v2=version_2, use_old=old)
     
 
 
 
-    if args.transfer_learning:
-        h, e = train_model(model, X, Y, args.epochs, args.batch_size, args.v_split)
-        summarize_diagnostics(h, e, args.path,  lr=args.lr, v_split=args.v_split, version=postfix)
+    if transfer_learning:
+        h, e = train_model(model, X, Y, epochs, batch_size, v_split)
+        summarize_diagnostics(h, e, path,  lr=lr, v_split=v_split, version=postfix)
 
         
     # loss, acc = model.evaluate(test_images, test_labels, verbose=2)
     # print("Restored model, accuracy: {:5.2f}%".format(100 * acc))
     
-    if args.save_option == 'y' or input("Save model?:[y] ").lower() == 'y':
-        hullifier_save(model, args.path + 'model/', lr=args.lr, epochs=args.epochs, v_split=args.v_split, v2=args.version_2)
-        printo(f'model saved to {args.path}')
+    if save_option == 'y' or input("Save model?:[y] ").lower() == 'y':
+        hullifier_save(model, path + 'model/', lr=lr, epochs=epochs, v_split=v_split, v2=version_2)
+        printo(f'model saved to {path}')
 
 
 if __name__ == "__main__":
