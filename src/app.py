@@ -64,7 +64,7 @@ app.layout = html.Div(
             id='upload-video',
             filetypes=['mp4'],
         ),
-        html.H2("frame", id='test-h'),
+        html.H2("frame", id='curr-frame'),
         html.Div(id='hidden-div', children=[], style={'display':'none'})
     ]
 )

@@ -33,6 +33,21 @@ def pre_proc_img(im, target_shape=(224,224)):
     
     
     return im
+def split_data(X,Y, split):
+    
+    if not X.shape[0] == Y.shape[0]:
+        print('oopsie')
+        exit()
+    if 0 < split and split < 1:
+        split = -int(np.ceil(X.shape[0] * split))
+
+    x = X[:split] # train
+    y = Y[:split] # train
+    xt = X[split:] # test
+    yt = Y[split:] # test
+    
+
+    return x, y, xt, yt
 
 def get_cats(path=coco_file_path):
     c = COCO(path)

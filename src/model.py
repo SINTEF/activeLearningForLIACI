@@ -36,11 +36,11 @@ def preproc_model_create(resize=False, target_size=224):
 def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs):
     e = range(1, epochs+1)
     fig, ax, = plt.subplots(1,2)
-    fig.suptitle("Loss and accuracy graphs")
     ax[0].plot(e, history.history['loss'], color='blue', label='train')
     ax[0].plot(e, history.history['val_loss'], color='orange', label='test')
     ax[0].title.set_text('Loss function')
     ax[0].set_xlabel('Epoch')
+    ax[0].grid()
     ax[0].legend()
 
     ax[1].plot(e, history.history['binary_accuracy'], color='blue', label='train')
@@ -48,25 +48,31 @@ def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs
     ax[1].title.set_text('Accuracy')
     ax[1].set_xlabel('Epoch')
     ax[1].legend()
+    ax[1].grid()
     ax[1].set_ylim([0.75, 0.94])
 
     params = f'graph_epochs-{epochs}'
 
     for k,v in kwargs.items():
-        params += f'_{k}-{v}'
+        params += f', {k}={v}'
 
-    fig.savefig(path+ params+ '.pdf')
-    fig.savefig(path+ params+ '.png')
+    fig.suptitle(f"Loss and accuracy graph\n{params}")
+    fig.tight_layout()
+
+    params = 'graph_' + params.replace(', ', '_').replace('=', '-')
+    
+    fig.savefig(path+ params + '.pdf')
+    fig.savefig(path+ params + '.png')
     # plt.show()
 
-def train(model, X, Y, batch_size=50, epochs=10, v_split=0.2):
+def train(model, X, Y, validation_data, batch_size=50, epochs=10):
 
     history = model.fit(
         x=X,
         y=Y,
         epochs=epochs,
         batch_size=batch_size,
-        validation_split=v_split,
+        validation_data=validation_data,
     )
     return history, epochs
 
@@ -98,21 +104,12 @@ def model_create(d_shape, n_cats=9, v2=False):
         model.add(Conv2D(filters=n_cats, kernel_size=(1,1), padding='same', activation='linear'))
         model.add(Reshape((n_cats,)))
         model.add(Activation('sigmoid'))
-
-    # model.build(d_shape)
-
-    # model.compile(
-    #     optimizer = RMSprop(learning_rate=lr), # 2e-4
-    #     loss = 'binary_crossentropy',
-    #     metrics=[BinaryAccuracy()]
-    # )
-    # model.summary()
-    
     
     return model
 
-def hullifier_load(v2=False, resize=False):
-    hullifier = load_model(model_path + ('_v2' if v2 else '_v1'))
+def hullifier_load(path, resize=False):
+    print(f'Trying to load model from: {path}')
+    hullifier = load_model(path)
     if resize and type(hullifier.layers[0]) != Resizing:
         hullifier = Sequential([Resizing(224,224), hullifier])
     return hullifier
@@ -129,7 +126,7 @@ def hullifier_create(X, n_cats=9, lr=2e-4, v2=False, resize=False):
     hullifier.add(mobilenet)
     hullifier.add(classifier)
     hullifier.compile(
-        optimizer = RMSprop(learning_rate=lr), # 2e-4
+        optimizer = RMSprop(learning_rate=lr), 
         loss = 'binary_crossentropy',
         metrics=[BinaryAccuracy()]
     )
@@ -138,10 +135,9 @@ def hullifier_create(X, n_cats=9, lr=2e-4, v2=False, resize=False):
 
 def hullifier_save(model, path, **kwargs):
     model.save(path)
-    params = f'\n'
-
+    params = ''
     for k,v in kwargs.items():
-        params += f'\n{k} = {v}'
+        params += f'{k}={v}\n'
 
     with open(path + '/params.txt', 'w+') as f:
         f.write(params) 
@@ -156,10 +152,10 @@ def main():
     #     # (1,7,7,1024),
     #     (1,7,7,1280), v2=True
     # )
-    mb = MobileNet(include_top=False)
-    mb.save('models/mobilenet/')
-    mb = MobileNetV2(include_top=False)
-    mb.save('models/mobilenet_v2/')
+    # mb = MobileNet(include_top=False)
+    # mb.save('models/mobilenet/')
+    # mb = MobileNetV2(include_top=False)
+    # mb.save('models/mobilenet_v2/')
     # history = model.fit()
     # -1.107 mm Is good 
     # - 1.102 mm 
