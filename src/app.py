@@ -66,7 +66,10 @@ app.layout = html.Div(
             filetypes=['mp4'],
         ),
         html.H2("frame", id='curr-frame'),
-        dcc.Interval(id='inter', interval=1000/4),
+        dcc.Interval(
+            id='inter', 
+            interval=1000, 
+        ),
         html.Div(id='hidden-div', children=[], style={'display':'none'})
 
     ]

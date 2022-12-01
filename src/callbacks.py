@@ -35,7 +35,7 @@ def get_callbacks(app, af):
 
     @app.callback(
         Output("download", "data"), 
-        [Input("btn", "n_clicks")], 
+        Input("btn", "n_clicks"), 
         State('time-line', 'figure'),
         prevent_initial_call=True
     )
@@ -45,7 +45,16 @@ def get_callbacks(app, af):
             raise PreventUpdate("Can't download figure right now")
         f_path = af.get_fig_path()
         return dcc.send_file(f_path)
-        
+
+    # @app.callback( video-player's state "playing" doesn't work
+    #     Output('inter','disabled'),
+    #     Input('video-player','playing')
+    # )
+    # def toggle_interval(is_playing):
+    #     printe(f'Is_playing {is_playing} ')
+    #     if is_playing:
+    #         return False
+    #     return True
     @app.callback(
         Output('curr-frame', 'children'),
         Output('label-0', 'color'),
@@ -60,7 +69,7 @@ def get_callbacks(app, af):
         Input('inter', 'n_intervals'),
         State('video-player', 'currentTime'),
     )
-    def update_alerts(inter, currentTime):
+    def update_alerts(inter, currentTime,playing):
         if not currentTime or not af.fps or not af.tnf:
             raise PreventUpdate("Can't update alerts")
 
@@ -70,7 +79,6 @@ def get_callbacks(app, af):
 
         pred = af.predictions[frame]
         labs = tuple(np.where(pred, 'success', 'danger'))
-        print('retfranes')
         return (frame,) + labs
         
     @app.callback(

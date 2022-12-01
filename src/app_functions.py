@@ -73,7 +73,7 @@ class AppFunc:
         
         print('Preprocessing & predicting...')
         X = self.model.predict(frames)
-        predictions = np.where(0.5<=X, 1, 0)
+        predictions = np.where(cnf.threshold <=X, 1, 0)
         return frames, predictions
 
     def get_fig_path(self):
