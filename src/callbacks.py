@@ -1,4 +1,3 @@
-import time
 from dash.dependencies import Input, Output, State
 import cv2
 from prints import printe, printo
@@ -8,9 +7,8 @@ import numpy as np
 import dash_uploader as du
 import base64
 from dash import html
-# from dash_extensions.snippets import send_file
 import config as cnf
-import time
+
 def get_callbacks(app, af):
     
     @app.callback(
@@ -49,7 +47,7 @@ def get_callbacks(app, af):
         return dcc.send_file(f_path)
         
     @app.callback(
-        Output('test-h', 'children'),
+        Output('curr-frame', 'children'),
         Output('label-0', 'color'),
         Output('label-1', 'color'),
         Output('label-2', 'color'),
@@ -59,19 +57,21 @@ def get_callbacks(app, af):
         Output('label-6', 'color'),
         Output('label-7', 'color'),
         Output('label-8', 'color'),
-        Input('video-player', 'currentTime'),
-        prevent_initial_call=True
+        Input('inter', 'n_intervals'),
+        State('video-player', 'currentTime'),
     )
-    def update_alerts(currentTime):
+    def update_alerts(inter, currentTime):
         if not currentTime or not af.fps or not af.tnf:
             raise PreventUpdate("Can't update alerts")
 
         frame = int((currentTime * af.fps))
         if not frame < af.tnf:
             raise PreventUpdate("Can't update alerts")
+
         pred = af.predictions[frame]
-        l0, l1, l2, l3, l4, l5, l6, l7, l8 = np.where(pred, 'success', 'danger')
-        return frame, l0, l1, l2, l3, l4, l5, l6, l7, l8
+        labs = tuple(np.where(pred, 'success', 'danger'))
+        print('retfranes')
+        return (frame,) + labs
         
     @app.callback(
         Output('video-player', 'seekTo'),

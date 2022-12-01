@@ -34,8 +34,8 @@ def generate_label_alerts():
 
 
 class AppFunc:
-    def __init__(self):
-        self.model = hullifier_load(resize=False)
+    def __init__(self, model_path=cnf.model_path):
+        self.model = hullifier_load(model_path, resize=False)
         self.labels = get_cat_lab()
         self.tmp_path = cnf.tmp_dir
 

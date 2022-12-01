@@ -37,6 +37,7 @@ app.layout = html.Div(
                     DashPlayer(
                         id='video-player',
                         url=None,
+                        intervalCurrentTime=10,
                         controls=True,
                         muted = True,
                         style={'width':'500px','display': 'inline-block', }#'right': '100px'}
@@ -65,7 +66,9 @@ app.layout = html.Div(
             filetypes=['mp4'],
         ),
         html.H2("frame", id='curr-frame'),
+        dcc.Interval(id='inter', interval=1000/4),
         html.Div(id='hidden-div', children=[], style={'display':'none'})
+
     ]
 )
 

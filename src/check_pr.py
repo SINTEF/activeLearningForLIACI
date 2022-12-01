@@ -1,11 +1,11 @@
-from os import walk
+from os import walk, mkdir, path
 from pipeline import pipeline_start
 from data import load_from_coco
 from prints import printc
 
-def get_dict_from_file(path):
+def get_dict_from_file(f_path):
     values = {}
-    with open(path, 'r') as f:
+    with open(f_path, 'r') as f:
         for line in f:
             if not '=' in line:
                 continue
@@ -17,7 +17,6 @@ def main():
     
     bench_dir = '../benchmarks/' + '2022_11_29_1306' + '/'
     dirs = walk(bench_dir)
-    # subdirs = [x[0] for x in dirs]
     subdirs = [ x[0].split('/')[-1] for x in dirs if len(x[0].split('/')) == 4 and x[0].split('/')[-1]]
 
     X, Y = load_from_coco()
@@ -26,14 +25,20 @@ def main():
     for d in subdirs:
         if not d:
             continue
+        
+        dir_path = bench_dir + d + '/'
+        params_path = dir_path + 'model/params.txt'
+        pdf_path = dir_path + 'pdfs/'
 
-        params_path = bench_dir+ d + '/model/params.txt'
+        if not path.isdir(pdf_path):
+            mkdir(pdf_path)
+            
         params = get_dict_from_file(params_path)
-        print(params)
-        printc(f'Processing: {bench_dir + d}')
+
+        printc(f'Processing: {dir_path}')
         pipeline_start(
-            model_path=bench_dir + d + '/model/', 
-            path=bench_dir + d + '/',
+            model_path=dir_path + 'model/', 
+            path=dir_path,
             transfer_learning=False,
             evaluate=True,
             save_option='n',

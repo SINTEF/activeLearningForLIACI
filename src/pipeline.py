@@ -35,6 +35,9 @@ def train_model(model, res, Y, epochs, batch_size, validation_data):
         validation_data=validation_data,
     )
     return h, e
+def show_bar_value(ax):
+    for bars in  ax.containers:
+        ax.bar_label(bars)
 
 def recall_precision(predictions, tp_table, truth):
     n_predictions = predictions.sum()
@@ -85,6 +88,7 @@ def compute_best_f1(predictions, threshs, Y, save_path):
     ax.legend()
     f.tight_layout()
     f.savefig(save_path+'prec_reca_curve.png')
+    f.savefig(save_path+'pdfs/prec_reca_curve.pdf')
     return best
 
 def eval_dataset(predictions, truth, split, save_path, labels):
@@ -118,6 +122,8 @@ def eval_dataset(predictions, truth, split, save_path, labels):
     ax.legend()
     f.tight_layout()
     f.savefig(save_path+'dataset_stats.png')
+    # print(save_path+'pdfs/dataset_stats.pdf')
+    f.savefig(save_path+'pdfs/dataset_stats.pdf')
 
     # Test dataset
     f, ax = plt.subplots()
@@ -139,6 +145,7 @@ def eval_dataset(predictions, truth, split, save_path, labels):
     f.tight_layout()
     
     f.savefig(save_path+'dataset_test_stats.png')
+    f.savefig(save_path+'pdfs/dataset_test_stats.pdf')
 
     # Show ratio of images
     # Calculate ratio for all, train, test
@@ -152,7 +159,7 @@ def eval_dataset(predictions, truth, split, save_path, labels):
     img_per_test_cat = [np.round(im / n_imgs, 2) for i, im in enumerate(img_per_test_cat)]
         
     f, ax = plt.subplots()
-    f.suptitle('Number of images for each class in the LIACi dataset')
+    f.suptitle('Partitioning of images for each class in the LIACi dataset')
     x_ax = np.arange(len(labels))    
     ax.grid(True)
     
@@ -161,20 +168,23 @@ def eval_dataset(predictions, truth, split, save_path, labels):
     ax.bar(x_ax+offset, img_per_test_cat, width=offset, label='Test images')
     
     # Show bar value for every bar in the plot
-    # for bars in ax.containers:
-    #     ax.bar_label(bars)
+    # show_bar_value(ax)
         
     ax.set_xticks(x_ax, labels, rotation=-20)
 
-    ax.set_ylabel('Number of images in each class')
+    ax.set_ylabel('Partitioning of images in each class')
     ax.set_xlabel('Labels')
     ax.legend()
     f.tight_layout()
     f.savefig(save_path+'dataset_ratio_stats.png')
+    f.savefig(save_path+'pdfs/dataset_ratio_stats.pdf')
 
     return
+
+
     
-def show_acc(predictions, Y, x, y, xt, yt, labels, split, save_path='', **kwargs):
+def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
+    x, y, xt, yt = split_data(predictions, Y, split)
     thresh_start = 0.05
     thresh_end = 0.96
     thresh_step = 0.05
@@ -198,8 +208,6 @@ def show_acc(predictions, Y, x, y, xt, yt, labels, split, save_path='', **kwargs
     # Compute r/p for each category
     cat_r = []
     cat_p = []
-
-    
     
     f_labs = [lab.replace('_', '\n') for lab in labels]
         
@@ -217,62 +225,96 @@ def show_acc(predictions, Y, x, y, xt, yt, labels, split, save_path='', **kwargs
     ax.set_xticks(x_ax, f_labs, rotation=-20)
     
     ax.legend()
-    f.suptitle(f'Precision & Recall\n{params}')
+    f.suptitle(f'Precision & Recall\nfor each category of labels in the LIACi dataset')
     f.tight_layout()
     
     f.savefig(save_path + 'PR_labels.png')
+    f.savefig(save_path + 'pdfs/PR_labels.pdf')
     plt.close()
     # return
     # exit()
     
-    # Compute r/p for each image
+    # Compute average r/p for each image
     img_r = []
     img_p = []
     for pred, img_tp, t in zip(predictions, TP_table, Y):
         rec, prec = recall_precision(pred, img_tp, t)
         img_r.append(rec)
         img_p.append(prec)
-    avg_img_r = sum(img_r)/len(img_r)
-    avg_img_p = sum(img_p)/len(img_p)
+    avg_img_r = round(sum(img_r)/len(img_r),4)
+    avg_img_p = round(sum(img_p)/len(img_p),4)
     
 
     f, ax = plt.subplots()
     x_ax = np.arange(predictions.shape[0])
     
-    ax.bar(x_ax-width/2, img_p, width=width, label='Precision')
-    ax.bar(x_ax+width/2, img_r, width=width, label='Recall')
+    ax.bar(0, avg_img_p, label='Precision')
+    ax.bar(1, avg_img_r, label='Recall')
+    # ax.bar(x_ax-width/2, avg_img_p, width=width, label='Precision')
+    # ax.bar(x_ax+width/2, avg_img_r, width=width, label='Recall')
     # ax.set_xticks(x_ax, f_labs, rotation=-20)
     
+    show_bar_value(ax)
+    ax.set_ylim([0,1])
+    
     ax.legend()
-    f.suptitle(f'Precision & Recall\n{params}')
+    f.suptitle(f'Average Precision & Recall\n for every image in the LIACi dataset')
     f.tight_layout()
     
-    f.savefig(save_path + 'PR_frames.png')
+    f.savefig(save_path + 'PR_frames_avg.png')
+    f.savefig(save_path + 'pdfs/PR_frames_avg.pdf')
 
-    # Compute r/p for test images
-    TP_table
-    img_r = []
-    img_p = []
-    for pred, img_tp, t in zip(predictions, TP_table, yt):
-        rec, prec = recall_precision(pred, img_tp, t)
-        img_r.append(rec)
-        img_p.append(prec)
-    avg_img_r = sum(img_r)/len(img_r)
-    avg_img_p = sum(img_p)/len(img_p)
-    
+    # Compute r/p for category among the test images 
+    cat_r = []
+    cat_p = []
+            
+    # print(TP_table[yt.shape[0]:].shape)
+    print(TP_table[-yt.shape[0]:].shape)
+    for pred, cat_tp, t in zip(xt.T, TP_table[-yt.shape[0]:].T, yt.T):
+        rec, prec = recall_precision(pred, cat_tp, t)
+        cat_r.append(rec)
+        cat_p.append(prec)
+    width = 0.4
 
     f, ax = plt.subplots()
-    x_ax = np.arange(predictions.shape[0])
+    x_ax = np.arange(len(f_labs))
     
-    ax.bar(x_ax-width/2, img_p, width=width, label='Precision')
-    ax.bar(x_ax+width/2, img_r, width=width, label='Recall')
-    # ax.set_xticks(x_ax, f_labs, rotation=-20)
+    ax.bar(x_ax-width/2,  cat_p, width=width, label='Precision')
+    ax.bar(x_ax+width/2, cat_r, width=width, label='Recall')
+    ax.set_xticks(x_ax, f_labs, rotation=-20)
     
     ax.legend()
-    f.suptitle(f'Precision & Recall\n{params}')
+    f.suptitle(f'Precision & Recall\nfor each category of the test images in the LIACi dataset')
     f.tight_layout()
     
-    f.savefig(save_path + 'PR_frames.png')
+    f.savefig(save_path + 'PR_labels_test.png')
+    f.savefig(save_path + 'pdfs/PR_labels_test.pdf')
+
+    # Compute r/p for category among the train images 
+    cat_r = []
+    cat_p = []
+            
+    print(y.shape)
+    print(TP_table[:y.shape[0]].shape)
+    for pred, cat_tp, t in zip(x.T, TP_table[:y.shape[0]].T, y.T):
+        rec, prec = recall_precision(pred, cat_tp, t)
+        cat_r.append(rec)
+        cat_p.append(prec)
+    width = 0.4
+
+    f, ax = plt.subplots()
+    x_ax = np.arange(len(f_labs))
+    
+    ax.bar(x_ax-width/2,  cat_p, width=width, label='Precision')
+    ax.bar(x_ax+width/2, cat_r, width=width, label='Recall')
+    ax.set_xticks(x_ax, f_labs, rotation=-20)
+    
+    ax.legend()
+    f.suptitle(f'Precision & Recall\nfor each category of the train images in the LIACi dataset')
+    f.tight_layout()
+    
+    f.savefig(save_path + 'PR_labels_train.png')
+    f.savefig(save_path + 'pdfs/PR_labels_train.pdf')
 
 def parseArgs():
     parser = ArgumentParser()
@@ -323,7 +365,7 @@ def pipeline_start(n_imgs=0, n_cats=9, model_path='', transfer_learning=True, ve
         labs = get_cat_lab()
         predictions = model.predict(X)
         eval_dataset(predictions, Y, v_split, path, labs)
-        show_acc(predictions, Y, x, y, xt, yt, save_path=path, lr=lr, v_split=v_split, version_2=version_2, labels=labs)
+        show_acc(predictions, Y, save_path=path, lr=lr, split=v_split, version_2=version_2, labels=labs)
         
     if (save_option.lower() == 'y' or save_option == '') and (save_option.lower() == 'y' or input("Save model?:[y] ").lower() == 'y'):
         hullifier_save(model, path + 'model/', lr=lr, epochs=epochs, v_split=v_split, v2=version_2, seed=seed)
