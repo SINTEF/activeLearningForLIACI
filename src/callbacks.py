@@ -69,7 +69,7 @@ def get_callbacks(app, af):
         Input('inter', 'n_intervals'),
         State('video-player', 'currentTime'),
     )
-    def update_alerts(inter, currentTime,playing):
+    def update_alerts(inter, currentTime):
         if not currentTime or not af.fps or not af.tnf:
             raise PreventUpdate("Can't update alerts")
 

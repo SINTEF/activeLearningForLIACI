@@ -5,7 +5,8 @@ from tqdm import tqdm
 import numpy as np
 from data import get_cat_lab
 import matplotlib.pyplot as plt
-from itertools import product
+from utils import get_axs_iter
+import config as cnf
 
 
 
@@ -38,12 +39,13 @@ def create_timeline(model, path, video_path):
 
     x_ax = np.arange(tnf)
     figaro, axs  = plt.subplots(3,3)
-    
-    xy = product(np.arange(3), np.arange(3))
+    xy = get_axs_iter(axs)
+
     colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
     for l, label, (x, y), color in zip(predictions.T, labels, xy, colors):
         axs[x][y].plot(x_ax, l, c=color)
+        axs[x][y].axhline(cnf.threshold)
         axs[x][y].set_xlabel('Frame number')
         axs[x][y].set_ylabel(label)
         # axs[x][y].legend()
@@ -51,21 +53,38 @@ def create_timeline(model, path, video_path):
     
     
     figaro.tight_layout()
-    figaro.savefig(path + 'timeline.png')
-    figaro.savefig(path + 'pdfs/timeline.pdf')
+    figaro.savefig(path + 'timeline_sigmoid.png')   
+    figaro.savefig(path + 'pdfs/timeline_sigmoid.pdf')
+    
+    # binary
+    predictions = np.where(cnf.threshold<= predictions, 1, 0)
+    f, ax = plt.subplots()
+    
+    ax.imshow(predictions.T, aspect=(100),interpolation='nearest', cmap='plasma')
+    ax.set_yticks(np.arange(len(labels)), labels)
+    
+    
+    f.tight_layout()
+    f.savefig(path + 'timeline_binary.png')   
+    f.savefig(path + 'pdfs/timeline_binary.pdf')
+    
+
 
     return figaro
         
 def main():
     video_path = '../videoplayback.mp4'
-    bench_dir = '../benchmarks/' + '2022_11_29_1306' + '/'
+    bench_dir = '../benchmarks/' + cnf.curr_bench + '/'
     dirs = walk(bench_dir)
     subdirs = [ x[0].split('/')[-1] for x in dirs if len(x[0].split('/')) == 4 and x[0].split('/')[-1]]
-    
-    dir_path = bench_dir + subdirs[0] + '/'
-    model_path =  dir_path + 'model/'
-    model = hullifier_load(model_path)
-    create_timeline(model, dir_path, video_path)
+
+    for d in tqdm(subdirs):
+        if not d:
+            continue
+        dir_path = bench_dir + d + '/'
+        model_path =  dir_path + 'model/'
+        model = hullifier_load(model_path)
+        create_timeline(model, dir_path, video_path)
     
 
 

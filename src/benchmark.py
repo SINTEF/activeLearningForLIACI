@@ -37,7 +37,7 @@ def main():
     
     lr =            [ 
                         4e-4, 
-                        5e-4, 
+                        # 5e-4, 
                         # 2e-5,
                     ]
 
@@ -47,7 +47,7 @@ def main():
                     ]
     version2 =      [ 
                         False, 
-                        # True 
+                        True 
                     ]
     
 

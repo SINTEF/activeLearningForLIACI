@@ -37,7 +37,6 @@ app.layout = html.Div(
                     DashPlayer(
                         id='video-player',
                         url=None,
-                        intervalCurrentTime=10,
                         controls=True,
                         muted = True,
                         style={'width':'500px','display': 'inline-block', }#'right': '100px'}

@@ -4,6 +4,7 @@ from model import summarize_diagnostics, train, hullifier_create, hullifier_load
 import matplotlib.pyplot as plt
 from argparse import ArgumentParser, BooleanOptionalAction
 from prints import printe, printw, printo, printc
+from utils import show_bar_value, recall_precision
 
 def choose_model(X, n_cats, lr, v2, model_path):
     
@@ -35,22 +36,9 @@ def train_model(model, res, Y, epochs, batch_size, validation_data):
         validation_data=validation_data,
     )
     return h, e
-def show_bar_value(ax):
-    for bars in  ax.containers:
-        ax.bar_label(bars)
 
-def recall_precision(predictions, tp_table, truth):
-    n_predictions = predictions.sum()
-    TP = tp_table.sum() # Find true positives / TP / hits
-    P = int(truth.sum()) # n Positives
 
-    FP = n_predictions - TP # Find False Positives / FP / misses
-    
-    recall = np.round(TP / P, 5) if P else 0
-    precision = np.round(TP/n_predictions, 5) if n_predictions else 0 
-    
-    # printo(f'Psum: {n_predictions}, TP: {TP}, FP: {FP}, P: {P}, truth.shape: {truth.shape}, missing hits: {P-TP}, Precision: {precision}, Recall: {recall}')
-    return recall, precision
+
 def f1_score(precision, recall):
     return (2 * ((precision * recall) / (precision + recall)))
 
@@ -112,8 +100,7 @@ def eval_dataset(predictions, truth, split, save_path, labels):
     ax.bar(x_ax+offset, img_per_test_cat, width=offset, label='Test images')
     
     # Show bar value for every bar in the plot
-    for bars in ax.containers:
-        ax.bar_label(bars)
+    show_bar_value(ax)
         
     ax.set_xticks(x_ax, labels, rotation=-20)
 
@@ -134,8 +121,7 @@ def eval_dataset(predictions, truth, split, save_path, labels):
     bar = ax.bar(x_ax, img_per_test_cat, label='Test images')
     ax.bar_label(bar)
     # Show bar value for every bar in the plot
-    for bars in ax.containers:
-        ax.bar_label(bars)
+    show_bar_value(ax)
         
     ax.set_xticks(x_ax, labels, rotation=-20)
 
