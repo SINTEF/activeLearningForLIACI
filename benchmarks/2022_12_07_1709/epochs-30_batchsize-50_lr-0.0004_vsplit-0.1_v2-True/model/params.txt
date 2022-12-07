@@ -1,0 +1,5 @@
+lr=0.0004
+epochs=30
+v_split=0.1
+v2=True
+seed=0

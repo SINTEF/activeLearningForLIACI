@@ -26,6 +26,10 @@ def main():
         rmtree(masks)
         print('Removed ' + masks)
 
+    data = '../data.zip'
+    if path.isdir(data):
+        rmtree(data)
+        print('Removed ' + data)
     printo('Dataset downloaded')
         
     

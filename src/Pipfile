@@ -15,7 +15,9 @@ dash-player = "*"
 dash-bootstrap-components = "*"
 tqdm = "*"
 datetime = "*"
+
 pandas = "*"
+wget = "*"
 
 kaleido = "*"
 
