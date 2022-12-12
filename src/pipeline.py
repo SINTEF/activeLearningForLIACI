@@ -242,6 +242,7 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     
     show_bar_value(ax)
     ax.set_ylim([0,1])
+    ax.set_xticks([0,1], ['Precision', 'Recall'])
     
     ax.legend()
     f.suptitle(f'Average Precision & Recall\n for every image in the LIACi dataset')
@@ -255,7 +256,7 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     cat_p = []
             
     # print(TP_table[yt.shape[0]:].shape)
-    print(TP_table[-yt.shape[0]:].shape)
+    # print(TP_table[-yt.shape[0]:].shape)
     for pred, cat_tp, t in zip(xt.T, TP_table[-yt.shape[0]:].T, yt.T):
         rec, prec = recall_precision(pred, cat_tp, t)
         cat_r.append(rec)
