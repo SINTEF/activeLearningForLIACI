@@ -1,7 +1,7 @@
 # activeLearningForLIACI
 
 ## Requirements
-* Python 3.10 <= 
+* Python 3.10 
 * pipenv (if not installed, run `python3 -m pip install pipenv` to install pipenv through pip)
 
 
