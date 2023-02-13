@@ -1,12 +1,15 @@
 from dash.dependencies import Input, Output, State
-import cv2
-from prints import printe, printo
+from dash import html, ctx
+from dash_canvas.utils import array_to_data_url
 from dash.exceptions import PreventUpdate
 from dash import dcc
-import numpy as np
 import dash_uploader as du
+
+import cv2
+import numpy as np
 import base64
-from dash import html
+
+from prints import printe, printo
 import config as cnf
 
 def get_callbacks(app, af):
@@ -15,6 +18,7 @@ def get_callbacks(app, af):
         Output('video-player', 'url'),
         Output('video-filename', 'children'),
         Output('time-line', 'figure'),
+        Output('time-line-unsure', 'figure'),
         Output('loading', 'children'),
         Input('upload-video', 'isCompleted'),
         State('upload-video', 'fileNames'),
@@ -28,10 +32,11 @@ def get_callbacks(app, af):
         with open(path, "rb") as videoFile:
             video = "data:video/mp4;base64," +  base64.b64encode(videoFile.read()).decode('ascii')
 
-        timeline = af.create_timeline(path)
+        prediction_timeline, pred_unsure_timeline = af.create_timelines(path)
 
-        # return None, filename[0], timeline, ""
-        return video, filename[0], timeline, ""
+
+        # return None, filename[0], prediction_timeline, ""
+        return video, filename[0], prediction_timeline, pred_unsure_timeline, ""
 
     @app.callback(
         Output("download", "data"), 
@@ -46,15 +51,6 @@ def get_callbacks(app, af):
         f_path = af.get_fig_path()
         return dcc.send_file(f_path)
 
-    # @app.callback( video-player's state "playing" doesn't work
-    #     Output('inter','disabled'),
-    #     Input('video-player','playing')
-    # )
-    # def toggle_interval(is_playing):
-    #     printe(f'Is_playing {is_playing} ')
-    #     if is_playing:
-    #         return False
-    #     return True
     @app.callback(
         Output('curr-frame', 'children'),
         Output('label-0', 'color'),
@@ -66,6 +62,15 @@ def get_callbacks(app, af):
         Output('label-6', 'color'),
         Output('label-7', 'color'),
         Output('label-8', 'color'),
+        Output('label-0-p', 'children'),
+        Output('label-1-p', 'children'),
+        Output('label-2-p', 'children'),
+        Output('label-3-p', 'children'),
+        Output('label-4-p', 'children'),
+        Output('label-5-p', 'children'),
+        Output('label-6-p', 'children'),
+        Output('label-7-p', 'children'),
+        Output('label-8-p', 'children'),
         Input('inter', 'n_intervals'),
         State('video-player', 'currentTime'),
     )
@@ -77,15 +82,50 @@ def get_callbacks(app, af):
         if not frame < af.tnf:
             raise PreventUpdate("Can't update alerts")
 
+        pred_bool = af.predictions_bool[frame]
         pred = af.predictions[frame]
-        labs = tuple(np.where(pred, 'success', 'danger'))
-        return (frame,) + labs
+        
+        labs = tuple(np.where(pred_bool, 'success', 'danger'))
+        pred = np.round(pred,3).astype('U')
+        # print(pred)
+        return (frame,) + labs + tuple(pred)
         
     @app.callback(
+        Output('hidden-div','children'), # Add some thing that says iamge was saved
+        Input('submit-annotation', 'n_clicks'),
+        State('curr-frame', 'children'),
+        State('label-alerts', 'children'),
+        prevent_initial_call=True
+    )
+    def store_image(clicks, frame, children):
+        print(f'Button is clicked {clicks} times')
+        af.store_image(frame, children)
+        
+        return 
+        
+
+    @app.callback(
         Output('video-player', 'seekTo'),
+        Output('label-alerts', 'children'),
         Input('time-line', 'clickData'),
+        Input('time-line-unsure', 'clickData'),
+        State('label-alerts', 'children'),
         prevent_initial_call=True
     ) 
-    def get_graph_click(clickData):
+    def get_graph_click(annotations, uncertainties, children):
+        if ctx.triggered_id == 'time-line':
+            clickData = annotations
+        elif ctx.triggered_id == 'time-line-unsure':
+            clickData = uncertainties
+        
         frame = clickData['points'][0]['x']
-        return frame / af.tnf
+        j = 0
+        for i, child in enumerate(children):
+            if child['type'] == "ToggleSwitch": # check type
+                children[i]['props']['value'] = af.predictions_bool[frame][j]
+                j += 1
+
+        print("frame:",frame, frame / af.tnf)
+        return (frame / af.tnf), children
+
+    
