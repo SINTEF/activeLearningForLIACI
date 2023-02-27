@@ -8,7 +8,8 @@ from callbacks import get_callbacks
 from os import mkdir, path
 from shutil import rmtree
 
-from app_functions import AppFunc, generate_label_alerts, generate_label_switches
+from self_annotation import create_label_file
+from app_functions import AppFunc, generate_label_alerts
 import config as cnf
 
 
@@ -46,10 +47,6 @@ app.layout = html.Div(
                         id='submit-annotation',
                         style={'display':'inline-block'}
                     ),
-                    # html.Div(
-                    #     id='submit-tags',
-                    #     children=generate_label_switches()
-                    # ),
                     html.H2("frame", id='curr-frame'),
                     html.H2(
                         'Model annotations',
@@ -89,6 +86,8 @@ app.layout = html.Div(
             filetypes=['mp4'],
             # style={"font size":"+2"}
         ),
+        html.Button('Retrain model', id='ud-model'),
+        html.Div(id='hidden-div-upd', children=[], style={'display':'none'}),
         dcc.Interval(
             id='inter', 
             interval=1000, 
@@ -104,6 +103,8 @@ get_callbacks(app, af)
 if __name__ == '__main__':
     if path.isdir(cnf.tmp_dir):
         rmtree(cnf.tmp_dir) 
+    if not path.isdir(cnf.new_images_dir): 
+        create_label_file()
     mkdir(cnf.tmp_dir)
 
     app.run_server(debug=True)

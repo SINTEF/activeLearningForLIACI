@@ -16,7 +16,7 @@ from data import get_cat_lab
 def add_annotated_im(image, labels):
     """ 
     image: a numpy array of the image
-    labels: should be a binary multi hot vector
+    labels: should be a binary multi hot vector of the labels annotated in the image
     """
     with open(cnf.new_images_dir + 'labels.json', 'r+') as f:
         json_file = load(f)
@@ -73,18 +73,16 @@ def load_from_user_ann(target_size=(224,224)):
     anns = []
     with open(cnf.new_images_dir + 'labels.json', 'r') as f:
         image_d = load(f)
+        # print(image_d)
 
-    for i in image_d:
+    for i in image_d['images']:
         images.append(np.uint8(load_img(cnf.new_images_dir + 'images/' + i, target_size=target_size))) # open image, cast to uint8 and add to image list
-        anns.append(np.fromstring(image_d[i]['hot_vec_b'][1:-1],sep=' ',dtype=bool)) # Turn the hot vector into a binary np array and append to list
+        
+        anns.append(np.fromstring(image_d['images'][i]['hot_vec_b'][1:-1],sep=', ',dtype=bool)) # Turn the hot vector into a binary np array and append to list
 
-    return images, anns    
+    return np.array(images), np.array(anns)
 
 
 if __name__ == '__main__':
     pass
-    # create_label_file()    
-    a = np.arange(256).reshape(16,16).astype(np.uint8)
-    l = np.array([0,0,0,0,0,1,1,0,0])
-    add_annotated_im(a,l)
-    # load_from_user_ann()
+    create_label_file()    

@@ -34,6 +34,10 @@ def preproc_model_create(resize=False, target_size=224):
 
 
 def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs):
+    if not kwargs.items():
+        print('HELLNAW')
+    print('HELLyESSS')
+    return
     e = range(1, epochs+1)
     fig, ax, = plt.subplots(1,2)
     ax[0].plot(e, history.history['loss'], color='blue', label='train')
@@ -50,7 +54,7 @@ def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs
     ax[1].legend()
     ax[1].grid()
     ax[1].set_ylim([0.75, 0.94])
-
+    
     params = f'epochs={epochs}'
 
     for k,v in kwargs.items():
@@ -141,7 +145,6 @@ def hullifier_save(model, path, **kwargs):
 
     with open(path + '/params.txt', 'w+') as f:
         f.write(params) 
-    
     
 def main():
     # mobilenet = mobilenet_create()
