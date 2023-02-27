@@ -46,7 +46,7 @@ def create_label_file():
         Call this function to create a json file to store the label formats, calling this function
         when a file already exist will promt the user to delete the old file by typing 'yes'
     """
-    if path.exists(cnf.new_images_dir'):
+    if path.exists(cnf.new_images_dir):
         if input(f"{cnf.new_images_dir} already exists, are you sure you want to overwrite it? [yes]: ") == 'yes':
             printw('Overwriting...')
             rmtree(cnf.new_images_dir)
