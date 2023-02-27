@@ -21,3 +21,13 @@ def recall_precision(predictions, tp_table, truth):
     
     # printo(f'Psum: {n_predictions}, TP: {TP}, FP: {FP}, P: {P}, truth.shape: {truth.shape}, missing hits: {P-TP}, Precision: {precision}, Recall: {recall}')
     return recall, precision
+
+def get_dict_from_file(f_path):
+    values = {}
+    with open(f_path, 'r') as f:
+        for line in f:
+            if not '=' in line:
+                continue
+            (k,v) = line.replace(' ', '').replace('\n','').split('=')
+            values[k] = v
+    return values
