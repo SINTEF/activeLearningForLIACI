@@ -1,0 +1,13 @@
+dash
+dash-uploader
+matplotlib
+keras
+tensorflow
+pycocotools
+opencv-python
+dash-player
+dash-bootstrap-components
+tqdm
+datetime
+pandas
+kaleido
