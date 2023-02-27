@@ -51,7 +51,7 @@ def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs
     ax[1].grid()
     ax[1].set_ylim([0.75, 0.94])
 
-    params = f'graph_epochs-{epochs}'
+    params = f'epochs={epochs}'
 
     for k,v in kwargs.items():
         params += f', {k}={v}'

@@ -6,16 +6,20 @@ name = "pypi"
 [packages]
 dash = "*"
 dash-uploader = "*"
+dash-canvas = "*"
 matplotlib = "*"
 keras = "*"
 tensorflow = "*"
 pycocotools = "*"
 opencv-python = "*"
 dash-player = "*"
+dash_daq = "*"
 dash-bootstrap-components = "*"
 tqdm = "*"
 datetime = "*"
+
 pandas = "*"
+wget = "*"
 
 kaleido = "*"
 
