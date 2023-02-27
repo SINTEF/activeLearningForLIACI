@@ -98,8 +98,12 @@ def get_callbacks(app, af):
         prevent_initial_call=True
     )
     def store_image(clicks, frame, children):
-        print(f'Button is clicked {clicks} times')
-        af.store_image(frame, children)
+        print(f'Button is clicked {clicks} times at frame {frame}')
+        labels = []
+        for child in children:
+            if child['type'] == "ToggleSwitch": # check type
+                labels.append(child['props']['value'])
+        af.store_image(frame, labels)
         
         return 
         
@@ -128,4 +132,11 @@ def get_callbacks(app, af):
         print("frame:",frame, frame / af.tnf)
         return (frame / af.tnf), children
 
-    
+    @app.callback(
+        Output('hidden-div-upd','children'), # Add some thing that says iamge was saved
+        Input('ud-model','n_clicks'),
+        prevent_initial_call=True
+
+    )
+    def update_model(clicks):
+        af.incremental_train()
