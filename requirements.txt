@@ -1,4 +1,5 @@
 dash
+dash_canvas
 dash-uploader
 matplotlib
 keras
@@ -7,7 +8,9 @@ pycocotools
 opencv-python
 dash-player
 dash-bootstrap-components
+dash_daq
 tqdm
 datetime
 pandas
 kaleido
+wget
