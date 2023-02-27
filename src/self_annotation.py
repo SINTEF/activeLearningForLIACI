@@ -52,7 +52,7 @@ def create_label_file():
         else:
             printw('Exiting without overwriting...')
             return
-
+    mkdir(cnf.new_images_dir)
     with open(cnf.new_images_dir + 'labels.json', 'w') as f:
         labels = get_cat_lab()
         # print(d)
