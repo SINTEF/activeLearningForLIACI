@@ -90,7 +90,7 @@ app.layout = html.Div(
         du.Upload(
             id='upload-video',
             filetypes=['mp4'],
-            max_file_size=3000,
+            max_file_size=1024*10, # a*b -> b represents amounts of GB
         ),
         html.Button('Retrain model', id='ud-model'),
         html.Div(id='hidden-div-upd', children=[], style={'display':'none'}),
