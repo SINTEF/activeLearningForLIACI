@@ -6,16 +6,19 @@ from dash import dcc
 import dash_uploader as du
 
 import cv2
+from PIL import Image
 import numpy as np
-import base64
+from matplotlib import cm
 
+from utils import open_video_b64
 from prints import printe, printo
 import config as cnf
 
 def get_callbacks(app, af):
     
     @app.callback(
-        Output('video-player', 'url'),
+        # Output('video-player', 'url'),
+        # Output('vid-img', 'figure'),
         Output('video-filename', 'children'),
         Output('time-line', 'figure'),
         Output('time-line-unsure', 'figure'),
@@ -28,15 +31,10 @@ def get_callbacks(app, af):
         if not iscompleted: 
             raise PreventUpdate("no content to update")
         path = cnf.tmp_dir + upload_id + '/' + filename[0]        
-
-        with open(path, "rb") as videoFile:
-            video = "data:video/mp4;base64," +  base64.b64encode(videoFile.read()).decode('ascii')
+        # video = open_video_b64(path)
 
         prediction_timeline, pred_unsure_timeline = af.create_timelines(path)
-
-
-        # return None, filename[0], prediction_timeline, ""
-        return video, filename[0], prediction_timeline, pred_unsure_timeline, ""
+        return filename[0], prediction_timeline, pred_unsure_timeline, ""
 
     @app.callback(
         Output("download", "data"), 
@@ -45,14 +43,12 @@ def get_callbacks(app, af):
         prevent_initial_call=True
     )
     def download_fig(n_clicks, figure):
-        printo(f"n{n_clicks} and f{type(figure)}")
         if not n_clicks or not figure:
             raise PreventUpdate("Can't download figure right now")
         f_path = af.get_fig_path()
         return dcc.send_file(f_path)
 
     @app.callback(
-        Output('curr-frame', 'children'),
         Output('label-0', 'color'),
         Output('label-1', 'color'),
         Output('label-2', 'color'),
@@ -71,15 +67,11 @@ def get_callbacks(app, af):
         Output('label-6-p', 'children'),
         Output('label-7-p', 'children'),
         Output('label-8-p', 'children'),
-        Input('inter', 'n_intervals'),
-        State('video-player', 'currentTime'),
+        Input('curr-frame', 'children'),
+        prevent_initial_call=True
     )
-    def update_alerts(inter, currentTime):
-        if not currentTime or not af.fps or not af.tnf:
-            raise PreventUpdate("Can't update alerts")
-
-        frame = int((currentTime * af.fps))
-        if not frame < af.tnf:
+    def update_alerts(frame):
+        if frame == 'frame':
             raise PreventUpdate("Can't update alerts")
 
         pred_bool = af.predictions_bool[frame]
@@ -87,8 +79,7 @@ def get_callbacks(app, af):
         
         labs = tuple(np.where(pred_bool, 'success', 'danger'))
         pred = np.round(pred,3).astype('U')
-        # print(pred)
-        return (frame,) + labs + tuple(pred)
+        return labs + tuple(pred)
         
     @app.callback(
         Output('hidden-div','children'), # Add some thing that says iamge was saved
@@ -98,7 +89,6 @@ def get_callbacks(app, af):
         prevent_initial_call=True
     )
     def store_image(clicks, frame, children):
-        print(f'Button is clicked {clicks} times at frame {frame}')
         labels = []
         for child in children:
             if child['type'] == "ToggleSwitch": # check type
@@ -109,8 +99,10 @@ def get_callbacks(app, af):
         
 
     @app.callback(
-        Output('video-player', 'seekTo'),
+        # Output('video-player', 'seekTo'),
+        Output('vid-img', 'src'),
         Output('label-alerts', 'children'),
+        Output('curr-frame', 'children'),
         Input('time-line', 'clickData'),
         Input('time-line-unsure', 'clickData'),
         State('label-alerts', 'children'),
@@ -121,7 +113,9 @@ def get_callbacks(app, af):
             clickData = annotations
         elif ctx.triggered_id == 'time-line-unsure':
             clickData = uncertainties
-        
+
+        if not clickData:
+            raise PreventUpdate("no click data received")
         frame = clickData['points'][0]['x']
         j = 0
         for i, child in enumerate(children):
@@ -129,8 +123,9 @@ def get_callbacks(app, af):
                 children[i]['props']['value'] = af.predictions_bool[frame][j]
                 j += 1
 
-        print("frame:",frame, frame / af.tnf)
-        return (frame / af.tnf), children
+        succ, img = af.get_img_from_idx(frame)
+        img = array_to_data_url(img)
+        return img, children, frame
 
     @app.callback(
         Output('hidden-div-upd','children'), # Add some thing that says iamge was saved

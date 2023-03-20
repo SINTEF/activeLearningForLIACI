@@ -11,6 +11,7 @@ from shutil import rmtree
 from self_annotation import create_label_file
 from app_functions import AppFunc, generate_label_alerts
 import config as cnf
+from utils import open_video_b64
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.BOOTSTRAP, dbc.icons.FONT_AWESOME]
@@ -35,12 +36,17 @@ app.layout = html.Div(
                         children=generate_label_alerts(),
                         style={'display':'inline-block'},
                     ),
-                    DashPlayer(
-                        id='video-player',
-                        url=None,
-                        controls=True,
-                        muted = True,
-                        style={'width':'500px','display': 'inline-block', }#'right': '100px'}
+                    # DashPlayer(
+                    #     id='video-player',
+                    #     url=None,
+                    #     controls=True,
+                    #     muted = True,
+                    #     style={'width':'500px','display': 'inline-block', }#'right': '100px'}
+                    # ),
+                    html.Img(
+                    # dcc.Graph(
+                        id='vid-img',
+                        # style={'width':'1500px','display': 'inline-block', }
                     ),
                     dbc.Button(
                         'submit',
@@ -84,13 +90,14 @@ app.layout = html.Div(
         du.Upload(
             id='upload-video',
             filetypes=['mp4'],
-            # style={"font size":"+2"}
+            max_file_size=3000,
         ),
         html.Button('Retrain model', id='ud-model'),
         html.Div(id='hidden-div-upd', children=[], style={'display':'none'}),
         dcc.Interval(
             id='inter', 
-            interval=1000, 
+            interval=1000,
+            disabled=True,
         ),
         html.Div(id='hidden-div', children=[], style={'display':'none'})
 

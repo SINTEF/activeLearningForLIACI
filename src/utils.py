@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import base64
 from itertools import product
 
 def show_bar_value(ax):
@@ -31,3 +32,8 @@ def get_dict_from_file(f_path):
             (k,v) = line.replace(' ', '').replace('\n','').split('=')
             values[k] = v
     return values
+
+def open_video_b64(path):
+    with open(path, "rb") as videoFile:
+            video = "data:video/mp4;base64," +  base64.b64encode(videoFile.read()).decode('ascii')
+    return video

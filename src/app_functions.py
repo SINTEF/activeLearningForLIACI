@@ -18,9 +18,9 @@ from utils import get_dict_from_file
 from self_annotation import add_annotated_im, load_from_user_ann
 from data import get_cat_lab, load_from_coco, shuffle_data, split_data
 from model import hullifier_load, train
-from prints import printo, printe
+from prints import printo, printe, printw
 import config as cnf
-
+from time import time 
 
 def generate_label_alerts():
                                     # html.I(className="bi bi-info-circle-fill me-2"),
@@ -71,37 +71,69 @@ class AppFunc:
         self.vid = None
         self.duration = None #
         self.tnf = None
-        self.frames = [] # np arr of all frames
+        self.frames = False # True if video has been parsed and predicted
         self.pif = None # previous image frame
 
     
-    def predict_part(self, start, stop=None):
-        if stop == None:
-            stop = start
-            start = 0
+    def predict_part(self, tnf):
         
-        frames = []
+        frames = np.empty((tnf, 224, 224, 3)).astype(np.uint8) # hardcoded 224,224,3 as the image size is known(for now)
 
-        self.vid.set(cv2.CAP_PROP_POS_FRAMES, start)
         print('Fetching images from video...')
-        for i in tqdm(range(start, stop)):
-            succ,im = self.vid.read()
+        self.vid.set(cv2.CAP_PROP_POS_FRAMES, 0) # make sure video is set to idx=0
+        for i in tqdm(range(tnf)):
+            succ, im = self.vid.read()
             if not succ:
                 raise Exception("Can't parse video image")
-                # break
-            im = cv2.resize(im, (224,224))
-            frames.append(im)
+            im = cv2.resize(im, (224,224)).astype(np.uint8)
+            frames[i,:,:,:] = im
 
-        printo('Done fetching...')
-            
-        frames = np.array(frames)
-            
+        printo('Done fetching...')        
+
         print('Preprocessing & predicting...')
         predictions = self.model.predict(frames)
         predictions_bool = np.where(cnf.threshold <=predictions, True, False)
         
         return frames, predictions_bool, predictions
 
+    def predict_part_slow(self, tnf):
+        nmf = cnf.n_mem_frames
+        mem_frames = np.empty((nmf, 224, 224, 3))
+        predictions = np.zeros((tnf, len(self.labels)))
+        
+        self.vid.set(cv2.CAP_PROP_POS_FRAMES, 0)
+
+        start = time()
+        j = 0
+        print(f'Fetching, preprocessing and predicting {tnf} images from video...')
+        for i in tqdm(range(tnf)):
+            succ, im = self.vid.read()
+            if not succ:
+                im = np.zeros((224,224,3))
+                # raise Exception(f"Can't parse image from video on frame {i}")
+
+            im = cv2.resize(im,(224,224)).astype(np.uint8)            
+            im = np.expand_dims(im, axis=0)
+            mem_frames[j,:,:,:] = im
+            j += 1
+
+            
+            if j == nmf: # Predict on frames in memory
+                print(f'Predicting images [{i+1-nmf}, {i}]')
+                predictions[i+1-nmf:i+1] = self.model.predict(mem_frames)
+                j = 0
+                
+            elif i+1 == tnf: # use predict only on the leftover part (happens on last run)
+                print(f'Predicting images [{i+1-j}, {tnf}]')
+                predictions[i+1-j:] = self.model.predict(mem_frames[:j])
+            
+        end = time()
+        printo(f'time used: {end-start}')
+        
+        predictions_bool = np.where(cnf.threshold <= predictions, True, False)
+
+        return True, predictions_bool, predictions
+        
     def get_fig_path(self):
         return self.fig_path
     def create_im_from_pred(self, pred, write=False):
@@ -119,9 +151,12 @@ class AppFunc:
 
         if write:
             figaro.write_image(self.fig_path)
-
+        print(f"Figaro {type(figaro)}")
         return figaro
-        
+
+    def find_uncertainty(self, img, vector):
+        pass
+
     def create_timelines(self, path):
         self.tmp_path = path
 
@@ -129,7 +164,7 @@ class AppFunc:
         self.fig_path = self.tmp_path.rsplit('.', 1)[0] + '_graph.pdf'
         
         self.vid = cv2.VideoCapture(self.tmp_path)
-        
+
         self.tnf = int(self.vid.get(cv2.CAP_PROP_FRAME_COUNT)) # Total number of frames
         self.fps = self.vid.get(cv2.CAP_PROP_FPS)
         self.duration = self.tnf / self.fps
@@ -138,7 +173,8 @@ class AppFunc:
         if not succ:
             raise Exception("Can't parse video")
 
-        self.frames, self.predictions_bool, self.predictions  = self.predict_part(self.tnf)
+        self.frames, self.predictions_bool, self.predictions  = self.predict_part_slow(self.tnf)
+    
         figaro = self.create_im_from_pred(self.predictions_bool, True)
 
         # Check if prediction is too close to threshold for activation
@@ -150,15 +186,25 @@ class AppFunc:
     def store_image(self, frame, labels):
         
         print(f'saving frame: {frame}')
-        if not len(self.frames) or not type(frame) == int :
+        if not self.frames:
             printe('cant capture frame yet')
             return
-        self.vid.set(cv2.CAP_PROP_POS_FRAMES, frame)
-        succ,im = self.vid.read()
+        succ, im = self.get_img_from_idx(int(frame)) 
         labels = [ int(l) for l in labels ]
 
         add_annotated_im(im, labels)
+        
+    def get_img_from_idx(self, idx):
+        if not 0 <= idx < self.tnf:
+            raise Exception(f'Bad index, was given: {idx}')
 
+        out = self.vid.set(cv2.CAP_PROP_POS_FRAMES, idx)
+        succ, im = self.vid.read()
+        if not succ:
+            return succ, np.zeros((224,224,3))
+
+        return succ, im
+        
     def incremental_train(self):
         return
         params = get_dict_from_file(cnf.model_path + 'params.txt')
@@ -195,3 +241,9 @@ class AppFunc:
 
 if __name__ == '__main__':
     pass
+    path = '../videoplayback.mp4'
+    af = AppFunc()
+    af.create_timelines(path)
+    af.get_img_from_idx(0)
+
+
