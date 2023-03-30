@@ -4,16 +4,9 @@ from data import load_from_coco
 from tqdm import tqdm
 from prints import printc
 import config as cnf
+from utils import get_dict_from_file
 
-def get_dict_from_file(f_path):
-    values = {}
-    with open(f_path, 'r') as f:
-        for line in f:
-            if not '=' in line:
-                continue
-            (k,v) = line.replace(' ', '').replace('\n','').split('=')
-            values[k] = v
-    return values
+
 
 def main():
     

@@ -17,6 +17,7 @@ dash_daq = "*"
 dash-bootstrap-components = "*"
 tqdm = "*"
 datetime = "*"
+dict2obj = "*"
 
 pandas = "*"
 wget = "*"

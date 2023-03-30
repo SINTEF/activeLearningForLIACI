@@ -104,7 +104,8 @@ def model_create(d_shape, n_cats=9, v2=False):
         model = Sequential(name="hullifier_0.01")
 
         model.add(GlobalAveragePooling2D(keepdims=True))
-        model.add(Dropout(0.01))
+        # model.add(Dropout(0.01))
+        model.add(Dropout(0.5))
         model.add(Conv2D(filters=n_cats, kernel_size=(1,1), padding='same', activation='linear'))
         model.add(Reshape((n_cats,)))
         model.add(Activation('sigmoid'))
@@ -118,7 +119,12 @@ def hullifier_load(path, resize=False):
         hullifier = Sequential([Resizing(224,224), hullifier])
     return hullifier
 
-        
+def hullifier_compile(model, lr=2e-4):
+    model.compile(
+        optimizer = RMSprop(learning_rate=lr), 
+        loss = 'binary_crossentropy',
+        metrics=[BinaryAccuracy()]
+    )
 def hullifier_create(X, n_cats=9, lr=2e-4, v2=False, resize=False):
     mobilenet = mobilenet_create(v2=v2)
     d_shape = mobilenet.predict(X).shape
@@ -129,6 +135,7 @@ def hullifier_create(X, n_cats=9, lr=2e-4, v2=False, resize=False):
     hullifier.add(aug_model_create())
     hullifier.add(mobilenet)
     hullifier.add(classifier)
+    hullifier_compile(hullifier, lr)
     hullifier.compile(
         optimizer = RMSprop(learning_rate=lr), 
         loss = 'binary_crossentropy',
@@ -147,6 +154,7 @@ def hullifier_save(model, path, **kwargs):
         f.write(params) 
     
 def main():
+    pass
     # mobilenet = mobilenet_create()
     # mobilenet = mobilenet_create(
     #     v2=True
@@ -162,7 +170,6 @@ def main():
     # history = model.fit()
     # -1.107 mm Is good 
     # - 1.102 mm 
-    return
 
 if __name__ == "__main__":
     main()

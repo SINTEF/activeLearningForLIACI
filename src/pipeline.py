@@ -321,7 +321,7 @@ def parseArgs():
     parser.add_argument('-v2','--version_2', required=False, default=False, type=bool)
     parser.add_argument('-ts','--target_size', required=False, default=(224,224))
     parser.add_argument('-tl','--transfer_learning', required=False, default=True)
-    parser.add_argument('-tl','--evaluate', required=False, default=True)
+    parser.add_argument('-ev','--evaluate', required=False, default=True)
     args = parser.parse_args()
 
     return args
@@ -329,7 +329,7 @@ def parseArgs():
 
 def main():
     args = parseArgs()
-    printo(str(args)[10:][:-1])
+    printo(str(args)[10:][:-1]) # Prints args without "Namespace()"
     pipeline_start(epochs=args.epochs, batch_size=args.batch_size, lr=args.lr, v_split=args.v_split, seed=args.seed, n_imgs=args.n_imgs, n_cats=args.n_cats, version_2=args.version_2, target_size=args.target_size, transfer_learning=args.transfer_learning)
 
 def pipeline_start(n_imgs=0, n_cats=9, model_path='', transfer_learning=True, version_2=False, epochs=1, batch_size=50, v_split=0.1, seed=0, lr=2e-4, path='../benchmark', save_option='', X=None, Y=None, evaluate=True, **kwargs):
