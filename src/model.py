@@ -34,10 +34,6 @@ def preproc_model_create(resize=False, target_size=224):
 
 
 def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs):
-    if not kwargs.items():
-        print('HELLNAW')
-    print('HELLyESSS')
-    return
     e = range(1, epochs+1)
     fig, ax, = plt.subplots(1,2)
     ax[0].plot(e, history.history['loss'], color='blue', label='train')
@@ -104,8 +100,9 @@ def model_create(d_shape, n_cats=9, v2=False):
         model = Sequential(name="hullifier_0.01")
 
         model.add(GlobalAveragePooling2D(keepdims=True))
-        # model.add(Dropout(0.01))
-        model.add(Dropout(0.5))
+        model.add(Dropout(0.01))
+        # model.add(Dropout(0.1))
+        # model.add(Dropout(0.2))
         model.add(Conv2D(filters=n_cats, kernel_size=(1,1), padding='same', activation='linear'))
         model.add(Reshape((n_cats,)))
         model.add(Activation('sigmoid'))

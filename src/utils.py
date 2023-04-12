@@ -52,6 +52,43 @@ def plot_history(ax, e, h, measurement=None, subfig_text=None, label='train', la
 
     ax.title.set_text(subfig_text)
     ax.set_xlabel('Epoch')
-    ax.grid()
+    ax.grid(visible=True)
     ax.legend()
+
+def get_predictions_bool(model, X):
+    preds = model.predict(X)
+    predictions_bool = np.where(cnf.threshold <= preds, True, False)
+    return predictions_bool, preds
+
+# Evaluates single image
+def find_uncertainty(image, b_preds, model):
+
+    image = expand_dims(convert_to_tensor(image),0)
+
+    values = np.empty(cnf.n_samples, cnf.n_labels)
+    for k in range(cnf.n_samples): # collect samples from n_samples-subnetworks
+        pred = model(image, training=True)[0]
+        values[k] = pred
+
+    mu = np.mu(values, axis=0)
+    var = np.var(values, axis=0)
+    sig = np.sqrt(var)
     
+    uncertain = np.where(b_preds and cnf.threshold <= mu - (2 * sig), True, False)
+    
+    return uncertain
+
+def history_merge(hists, eps, loss_measurement, measurement):
+
+    full_hist = np.empty((4, np.sum(eps)))
+    cum_e = np.cumsum(eps)
+
+    prev = 0
+    for h, e, ce in zip(hists, eps, cum_e):
+        full_hist[0, prev:ce] = np.array(h.history[loss_measurement])
+        full_hist[1, prev:ce] = np.array(h.history['val_' + loss_measurement])
+        full_hist[2, prev:ce] = np.array(h.history[measurement])
+        full_hist[3, prev:ce] = np.array(h.history['val_' + measurement])
+
+        prev = ce
+    return full_hist

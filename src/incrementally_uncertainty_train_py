@@ -9,31 +9,35 @@ from model import hullifier_load, hullifier_compile, hullifier_create, train
 from data import load_from_coco, shuffle_data, split_data
 from utils import get_dict_from_file, plot_history, find_uncertainty, history_merge
 
+
 measure_time = True
 if measure_time:
     start = time()
 def t():
     tm = int(time()-start)
     return f'{tm//60}m {tm%60}s'
+
+
+
 # [x] Create NEW hullifier
 # [x] Load old data
 # [x] split data into original split
 # [x] Split train data into smaller splits
-# [x] Train incrementally on parts of data and compare final result to original result
+# [x] Train on "inital" data
 # [] 
+# []
+# []
+# []
+# [] compare final result to original result
 # [] Seperate data with uncertain images and non uncertain images
 # [] Train on only uncertain images and train on only certain images
 # [] Compare results
 # []
-# []
-# []
-
 
 
 def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
-    cum_bud = np.cumsum(image_budget)
+    cum_bud = np.cumsum(image_budget[1:])
     incr_epochs = int(epochs * 0.2)
-    total_epochs =  ((image_budget.shape[0]-1) * incr_epochs) + epochs
     eps = np.full(image_budget.shape[0], incr_epochs, dtype=int)
     eps[0] = epochs # First epoch is initial training phase and is larger
     cum_e = np.cumsum(eps)
@@ -44,21 +48,43 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     full_hist = []
 
     prev_i = 0
-    
-    for cb, ep in zip(cum_bud, eps):
 
+    training_X = X[:cum_bud[0]]
+    training_Y = Y[:cum_bud[0]]
+    h, e = train(
+        model,
+        training_X,
+        training_Y,
+        batch_size=50,
+        epochs=epochs,
+        validation_data=(XT,YT),
+    )
+
+    full_hist.append(h)
+
+    for cb in cum_bud:
+        # Find uncertainties in da
+        uncertainties = np.empty(())
+        for i, (image, preds) in enumerate(zip(image_budget, predictions_bool)):
+            uncertainties[i] = find_uncertainty(image, preds, hullifier)
+        
+
+        # train on only uncertain images
         h, e = train(
             model,
-            X[:cb],
-            Y[:cb],
+            training_X,
+            training_Y,
             batch_size=50,
-            epochs=ep,
+            epochs=incr_epochs,
             validation_data=(XT,YT),
         )
 
         full_hist.append(h)
         
         
+    # total_epochs =  ((cum_bud.shape[0]) * incr_epochs) + epochs # Delete if line under works
+    total_epochs =  cum_e[-1]
+
     full_hist = history_merge(full_hist, eps, 'loss', 'binary_accuracy')
     for ce in cum_e:
         axs[0].axvline(ce, linestyle='dashed', linewidth=1,c='red')
@@ -183,13 +209,14 @@ def main():
         100, # 8
         103  # 9
         ])
-    incrementally_train(X, Y, XT, YT, float(params.lr), params.epochs, image_budget)
-    
 
-if __name__ == "__main__":
+
+
+    uncertainties = np.empty(XT.shape(0), cnf.n_labels)
+
+
     
+if __name__ == "__main__":
     main()
     if measure_time:
         print(f'Total time used: {t()}')
-
-    pass

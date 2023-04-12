@@ -2,6 +2,7 @@ import re
 import datetime
 import numpy as np
 import cv2
+from tensorflow import convert_to_tensor, expand_dims
 
 from dash_player import DashPlayer
 from dash import html
@@ -14,7 +15,7 @@ from base64 import b64decode
 from tqdm import tqdm
 import os
 
-from utils import get_dict_from_file
+from utils import get_dict_from_file, find_uncertainty
 from self_annotation import add_annotated_im, load_from_user_ann
 from data import get_cat_lab, load_from_coco, shuffle_data, split_data
 from model import hullifier_load, train
@@ -75,7 +76,9 @@ class AppFunc:
         self.pif = None # previous image frame
 
     
+    # This is retired and not in use
     def predict_part(self, tnf):
+        raise Exception("This is retired and not in use")
         
         frames = np.empty((tnf, 224, 224, 3)).astype(np.uint8) # hardcoded 224,224,3 as the image size is known(for now)
 
@@ -92,7 +95,7 @@ class AppFunc:
 
         print('Preprocessing & predicting...')
         predictions = self.model.predict(frames)
-        predictions_bool = np.where(cnf.threshold <=predictions, True, False)
+        predictions_bool = np.where(cnf.threshold <= predictions, True, False)
         
         return frames, predictions_bool, predictions
 
@@ -154,8 +157,20 @@ class AppFunc:
         print(f"Figaro {type(figaro)}")
         return figaro
 
-    def find_uncertainty(self, img, vector):
-        pass
+    def find_uncertainties(self):
+        uncertainties = np.empty(self.tnf, self.labels.shape[0])
+        
+        self.vid.set(cv2.CAP_PROP_POS_FRAMES, 0) # make sure video is set to idx=0
+        for i in tqdm(range(self.tnf)):
+            succ, im = self.vid.read()
+            if not succ or np.sum(self.predictions_bool[i]) == 0:
+                uncertainties[i] = np.zeros(self.labels.shape[0])
+            else:
+                im = cv2.resize(im, (224,224)).astype(np.uint8)
+                uncertainties[i] = find_uncertainty(im, self.predictions_bool[i], self.model)
+
+        return uncertainties
+
 
     def create_timelines(self, path):
         self.tmp_path = path
@@ -178,8 +193,9 @@ class AppFunc:
         figaro = self.create_im_from_pred(self.predictions_bool, True)
 
         # Check if prediction is too close to threshold for activation
-        pred_unsure = np.where(np.abs(self.predictions - cnf.threshold) <= cnf.wiggle_room, True, False)
-        figaro_unsure = self.create_im_from_pred(pred_unsure)
+        # uncertainties = np.where(np.abs(self.predictions - cnf.threshold) <= cnf.wiggle_room, True, False)
+        uncertainties = self.find_uncertainties()
+        figaro_unsure = self.create_im_from_pred(uncertainties)
         
         return figaro, figaro_unsure
     

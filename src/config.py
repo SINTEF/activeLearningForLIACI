@@ -6,6 +6,8 @@ model_path = '../benchmarks/' + curr_bench + '/epochs-30_batchsize-50_lr-0.0004_
 new_images_dir = '../user_annotations/'
 threshold = 0.35
 wiggle_room = 0.06
+n_samples = 50
+n_labels = 9
 
 # Set this lower if HW is bad
 n_mem_frames = 2500 
