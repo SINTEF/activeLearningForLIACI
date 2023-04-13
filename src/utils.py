@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import base64
 from itertools import product
 from dict2obj import Dict2Obj
+from tensorflow import convert_to_tensor, expand_dims
+import config as cnf
 
 def show_bar_value(ax):
     for bars in  ax.containers:

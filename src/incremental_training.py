@@ -42,9 +42,7 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     fig, axs = plt.subplots(1,2)
     
     full_hist = []
-
-    prev_i = 0
-    
+        
     for cb, ep in zip(cum_bud, eps):
 
         h, e = train(

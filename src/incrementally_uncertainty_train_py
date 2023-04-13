@@ -7,7 +7,7 @@ import config as cnf
 from prints import printe, printo
 from model import hullifier_load, hullifier_compile, hullifier_create, train
 from data import load_from_coco, shuffle_data, split_data
-from utils import get_dict_from_file, plot_history, find_uncertainty, history_merge
+from utils import get_dict_from_file, plot_history, find_uncertainty, history_merge, get_predictions_bool
 
 
 measure_time = True
@@ -38,17 +38,89 @@ def t():
 def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     cum_bud = np.cumsum(image_budget)
     incr_epochs = int(epochs * 0.2)
-    eps = np.full(image_budget.shape[0], incr_epochs, dtype=int)
-    eps[0] = epochs # First epoch is initial training phase and is larger
-    cum_e = np.cumsum(eps)
-    model = hullifier_create(X[:3], lr=lr)    
+    # eps = np.full(image_budget.shape[0], incr_epochs, dtype=int)
+    # eps[0] = epochs # First epoch is initial training phase and is larger
 
     fig, axs = plt.subplots(1,2)
+    model = hullifier_create(X[:3], lr=lr)    
     
-    full_hist = []
+    
+    
 
-    prev_i = 0
+    # The training dataset for the model
+    training_X = X[:cum_bud[0]]
+    training_Y = Y[:cum_bud[0]]
+    h, e = train(
+        model,
+        training_X,
+        training_Y,
+        batch_size=50,
+        epochs=epochs,
+        validation_data=(XT,YT),
+    )
 
+    full_hist.append(h)
+    skips = total_epochs = 0
+    for i, (cb, ib) in enumerate(zip(cum_bud[1:], image_budget[1:])):
+        # Find uncertainties in da
+        predictions_bool = get_predictions_bool(model, X[cum_bud[i-1]:cb])
+        uncertainties = np.empty((ib))
+        for i, (image, pred) in enumerate(zip(X[cum_bud[i-1]:cb], predictions_bool)):
+            uncertainties[i] = find_uncertainty(image, pred, model)
+        # Mask is True for all images that is uncertain
+        mask = np.where(np.sum(uncertainties, 1) == 0, True, False)
+
+        new_X = np.delete(X[cum_bud[i-1]:cb], mask, 0)
+        new_Y = np.delete(Y[cum_bud[i-1]:cb], mask, 0)
+            
+        print(f'was uncertain for {np.sum(mask)} images. Was certain for {np.sum(np.invert(mask))} images. New X is shape: {new_X.shape}')
+
+        if new_X.shape[0] == 0:
+            skips += 1
+            continue
+            
+        training_X = np.concatenate((training_X, new_X), 0)
+        training_Y = np.concatenate((training_Y, new_Y), 0)
+        # train on only uncertain images
+        h, e = train(
+            model,
+            training_X,
+            training_Y,
+            batch_size=50,
+            epochs=incr_epochs,
+            validation_data=(XT,YT),
+        )
+        eps.append(e)
+        full_hist.append(h)
+        
+    print(f'Skipped {skips} batche(s) because no images had uncertainties of significance')
+    
+
+    cum_e = np.cumsum(eps)
+    full_hist = history_merge(full_hist, eps, 'loss', 'binary_accuracy')
+    for ce in cum_e:
+        axs[0].axvline(ce, linestyle='dashed', linewidth=1,c='red')
+        axs[1].axvline(ce, linestyle='dashed', linewidth=1,c='red')
+    plot_history(axs[0], total_epochs, full_hist[:2], subfig_text='Loss function')
+    plot_history(axs[1], total_epochs, full_hist[2:], subfig_text='Binary accuracy')
+    axs[0].set_ylim(top=0.4)
+    axs[1].set_ylim(bottom=0.81)
+
+    fig.suptitle(f"Loss and accuracy graph for model trained incrementally")
+    fig.tight_layout()
+    fig.savefig('../out_imgs/incrementally_uncertainty_learning/'+'incr_incrementally_trained.png')
+    if measure_time:
+        printo(f'1st fig done after {t()} since start')
+
+# ==========================================================================================================================================
+
+    # Train a new model on only "non-uncertain" images
+    fig, axs = plt.subplots(1,2)
+    model = hullifier_create(X[:3], lr=lr)    
+    
+    full_hist = eps = []
+
+    # The training dataset for the model
     training_X = X[:cum_bud[0]]
     training_Y = Y[:cum_bud[0]]
     h, e = train(
@@ -62,18 +134,20 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
 
     full_hist.append(h)
     skips = 0
+    eps
     for i, (cb, ib) in enumerate(zip(cum_bud[1:], image_budget[1:])):
         # Find uncertainties in da
+        predictions_bool = get_predictions_bool(model, X[cum_bud[i-1]:cb])
         uncertainties = np.empty((ib))
-        for i, (image, preds) in enumerate(zip(X[cum_bud[i-1]:cb], predictions_bool)):
-            uncertainties[i] = find_uncertainty(image, preds, hullifier)
-        # Mask is True for all images that is uncertain
-        mask = np.where(np.sum(uncertainties, 1) == 0, True, False)
+        for i, (image, pred) in enumerate(zip(X[cum_bud[i-1]:cb], predictions_bool)):
+            uncertainties[i] = find_uncertainty(image, pred, model)
+        # Mask is True for all images that is NOT uncertain
+        mask = np.where(np.sum(uncertainties, 1) > 0, True, False)
 
         new_X = np.delete(X[cum_bud[i-1]:cb], mask, 0)
         new_Y = np.delete(Y[cum_bud[i-1]:cb], mask, 0)
             
-        print(f'was certain for {np.sum(mask)} images. Was UNcertain for {np.sum(np.invert(mask))} images. New X is shape: {new_X.shape}')
+        print(f'Was certain for {np.sum(mask)} images. Was Uncertain for {np.sum(np.invert(mask))} images. New X is shape: {new_X.shape}')
 
         if new_X.shape[0] == 0:
             skips += 1
@@ -111,56 +185,8 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     fig.tight_layout()
     fig.savefig('../out_imgs/incrementally_uncertainty_learning/'+'incr_incrementally_trained.png')
     if measure_time:
-        printo(f'1st fig done after {t()} since start')
-
-# ==========================================================================================================================================
-
-    # Train a new model on only "non-uncertain" images
-    model = hullifier_create(X[:3], lr=lr)
-    h, e = train(
-        model,
-        X,
-        Y,
-        batch_size=50,
-        epochs=epochs,
-        validation_data=(XT,YT),
-    )
-    fig, axs = plt.subplots(1,2)
-
-    plot_history(axs[0], e, h, 'loss', 'Loss function')
-    plot_history(axs[1], e, h, 'binary_accuracy', 'Binary accuracy')
-
-    ## Set axs info
-    axs[0].set_ylim(top=0.4)
-    axs[1].set_ylim(bottom=0.81)
-    
-    ## Set figk info
-    fig.suptitle(f"Loss and accuracy graph for\nmodel trained traditionally")
-    fig.tight_layout()
-    fig.savefig('../out_imgs/incrementally_uncertainty_learning/'+'incr_regular_trained.png')
-    if measure_time:
         printo(f'2nd fig done after {t()} since start')
-
-    fig, axs = plt.subplots(1,2)
-    # Plot both models, un-normalized
-    ## Plotting regular model
-    plot_history(axs[0], e, h, measurement='loss', subfig_text='Loss function')
-    plot_history(axs[1], e, h, measurement='binary_accuracy', subfig_text='Binary accuracy')
-
-    ## Plotting incremental model
-    plot_history(axs[0], total_epochs, full_hist[:2], subfig_text='Loss function')
-    plot_history(axs[1], total_epochs, full_hist[2:], subfig_text='Binary accuracy')
-
-    ## Set axs info
-    axs[0].set_ylim(top=0.4)
-    axs[1].set_ylim(bottom=0.81)
-
-    fig.suptitle(f"Loss and accuracy graph for\nboth models")
-    fig.tight_layout()
-    fig.savefig('../out_imgs/incrementally_uncertainty_learning/'+'incr_both_un-normalized.png')
-    if measure_time:
-        printo(f'3rd fig done after {t()} since start')
-    
+# ==========================================================================================================================================
     # Plot regular model normalized
     fig, axs = plt.subplots(1,2)
 
@@ -214,7 +240,7 @@ def main():
 
     image_budget = np.array([
         800, 
-        100, # 1
+        103, # 1
         100, # 2
         100, # 3
         100, # 4
@@ -222,15 +248,12 @@ def main():
         100, # 6
         100, # 7
         100, # 8
-        103  # 9
+        100  # 9
         ])
 
+    incrementally_train(X, Y, XT, YT, float(params.lr), params.epochs, image_budget)
 
 
-    uncertainties = np.empty(XT.shape(0), cnf.n_labels)
-
-
-    
 if __name__ == "__main__":
     main()
     if measure_time:
