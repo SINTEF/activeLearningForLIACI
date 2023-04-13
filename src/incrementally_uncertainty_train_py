@@ -36,7 +36,7 @@ def t():
 
 
 def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
-    cum_bud = np.cumsum(image_budget[1:])
+    cum_bud = np.cumsum(image_budget)
     incr_epochs = int(epochs * 0.2)
     eps = np.full(image_budget.shape[0], incr_epochs, dtype=int)
     eps[0] = epochs # First epoch is initial training phase and is larger
@@ -61,14 +61,26 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     )
 
     full_hist.append(h)
-
-    for cb in cum_bud:
+    skips = 0
+    for i, (cb, ib) in enumerate(zip(cum_bud[1:], image_budget[1:])):
         # Find uncertainties in da
-        uncertainties = np.empty(())
-        for i, (image, preds) in enumerate(zip(image_budget, predictions_bool)):
+        uncertainties = np.empty((ib))
+        for i, (image, preds) in enumerate(zip(X[cum_bud[i-1]:cb], predictions_bool)):
             uncertainties[i] = find_uncertainty(image, preds, hullifier)
-        
+        # Mask is True for all images that is uncertain
+        mask = np.where(np.sum(uncertainties, 1) == 0, True, False)
 
+        new_X = np.delete(X[cum_bud[i-1]:cb], mask, 0)
+        new_Y = np.delete(Y[cum_bud[i-1]:cb], mask, 0)
+            
+        print(f'was certain for {np.sum(mask)} images. Was UNcertain for {np.sum(np.invert(mask))} images. New X is shape: {new_X.shape}')
+
+        if new_X.shape[0] == 0:
+            skips += 1
+            continue
+            
+        training_X = np.concatenate((training_X, new_X), 0)
+        training_Y = np.concatenate((training_Y, new_Y), 0)
         # train on only uncertain images
         h, e = train(
             model,
@@ -81,7 +93,8 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
 
         full_hist.append(h)
         
-        
+    print(f'Skipped {skips} batche(s) because no images had uncertainties of significance')
+
     # total_epochs =  ((cum_bud.shape[0]) * incr_epochs) + epochs # Delete if line under works
     total_epochs =  cum_e[-1]
 
@@ -96,11 +109,13 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
 
     fig.suptitle(f"Loss and accuracy graph for model trained incrementally")
     fig.tight_layout()
-    fig.savefig('../out_imgs/incremental_learning/'+'incr_incrementally_trained.png')
+    fig.savefig('../out_imgs/incrementally_uncertainty_learning/'+'incr_incrementally_trained.png')
     if measure_time:
         printo(f'1st fig done after {t()} since start')
 
-    # Train a new model the regular way
+# ==========================================================================================================================================
+
+    # Train a new model on only "non-uncertain" images
     model = hullifier_create(X[:3], lr=lr)
     h, e = train(
         model,
@@ -122,7 +137,7 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     ## Set figk info
     fig.suptitle(f"Loss and accuracy graph for\nmodel trained traditionally")
     fig.tight_layout()
-    fig.savefig('../out_imgs/incremental_learning/'+'incr_regular_trained.png')
+    fig.savefig('../out_imgs/incrementally_uncertainty_learning/'+'incr_regular_trained.png')
     if measure_time:
         printo(f'2nd fig done after {t()} since start')
 
@@ -142,7 +157,7 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
 
     fig.suptitle(f"Loss and accuracy graph for\nboth models")
     fig.tight_layout()
-    fig.savefig('../out_imgs/incremental_learning/'+'incr_both_un-normalized.png')
+    fig.savefig('../out_imgs/incrementally_uncertainty_learning/'+'incr_both_un-normalized.png')
     if measure_time:
         printo(f'3rd fig done after {t()} since start')
     
@@ -177,7 +192,7 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
 
     fig.suptitle(f"Loss and accuracy graph for\nboth models, normalized")
     fig.tight_layout()
-    fig.savefig('../out_imgs/incremental_learning/'+'incr_both_normalized.png')
+    fig.savefig('../out_imgs/incrementally_uncertainty_learning/'+'incr_both_normalized.png')
     if measure_time:
         printo(f'5th fig done after {t()} since start')
 
