@@ -4,13 +4,14 @@ from tensorflow import convert_to_tensor, expand_dims
 import scipy.stats as stats
 import time
 import matplotlib.pyplot as plt
+from PIL import Image
 
-from scipy.optimize import curve_fit
+
 import config as cnf
 from prints import printc
 from model import hullifier_load, hullifier_compile
 from utils import get_dict_from_file, get_predictions_bool
-from data import load_from_coco, shuffle_data, split_data
+from data import load_from_coco, shuffle_data, split_data, get_cat_lab
 
 measure_time = True
 if measure_time:
@@ -38,41 +39,28 @@ def t():
 
 
 def measure_uncertainty(model, X, Y, n_samples):
-    b_pred, preds = get_predictions_bool(model, X)
-    print('bp shape:', b_pred.shape)
-    values = np.empty((X.shape[0], n_samples, Y.shape[1])) # shape (n_images, n_samples, 9)
+    labels = get_cat_lab()
+    b_preds, preds = get_predictions_bool(model, X)
+
+    sample_data = np.empty((X.shape[0], n_samples, Y.shape[1])) # shape (n_images, n_samples, 9)
     
     for i, im in enumerate(X):
         im = expand_dims(convert_to_tensor(im), 0)
         for k in range(n_samples):
             pred = model(im, training=True)[0]
-            values[i, k] = pred
+            sample_data[i, k] = pred
     
 
-    value = values[0] # look at all predictions for a single image
+    # im = Image.fromarray(X[frame])
+    # im.save('../out_imgs/uncertainty/'+ 'image_1.png')
+    
+    with open('npy/'+'u.npy', 'wb') as f:
+        np.save(f, sample_data)
+        np.save(f, b_preds)
+        np.save(f, preds)
+        np.save(f, X) # Save images sample data comes from
 
-    mu = np.mean(value, axis=0)
-    var = np.var(value, axis=0)
-    sigma = np.sqrt(var)
 
-    fig, axs = plt.subplots(1)
-
-    # Plot threshold
-    axs.axvline(cnf.threshold, linestyle='dashed', linewidth=1,c='red', label='Threshold')
-    for i, (m, s, v) in enumerate(zip(mu, sigma, var)): # Loops through all label's, mean, var and sigma
-        if not b_pred[1][i]:
-            continue
-        x = np.linspace(m - 3*s, m + 3*s, 100) # Create X axis range
-        axs.plot(x, stats.norm.pdf(x, m, s), label=f'Class {i},\n$\mu={np.round(m,2)}, \sigma^2={np.round(v,4)}$')
-
-        color = plt.gca().lines[-1].get_color() # get color from last plot
-        axs.scatter(m-2*s, stats.norm.pdf([m-2*s], m,s), linewidth=1, c=color, marker='x')
-        axs.axvline(preds[0][i], c=color)
-        
-    axs.legend()
-    axs.set_xlim([0,1])
-
-    fig.savefig('../out_imgs/uncertainty/'+ 'image_1.png' )
 def main():
     # Load parameters from old model
     params = get_dict_from_file(cnf.model_path + 'params.txt')
@@ -93,9 +81,10 @@ def main():
     X, Y = shuffle_data(X,Y)
     X,Y,XT,YT = split_data(X,Y,float(params.v_split))
 
-    # Don't set to less than two
-    n_unc_im = 3
-    n_samples = 50
+    # Don't set to < 2
+    n_unc_im = 5
+    # n_samples = cnf.n_samples
+    n_samples = 350
 
     measure_uncertainty(model, XT[:n_unc_im], YT[:n_unc_im], n_samples)
 

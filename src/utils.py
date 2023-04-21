@@ -6,6 +6,8 @@ from dict2obj import Dict2Obj
 from tensorflow import convert_to_tensor, expand_dims
 import config as cnf
 
+line_styles = ['solid', 'dotted', 'dashed', 'dashdot']
+
 def show_bar_value(ax):
     for bars in  ax.containers:
         ax.bar_label(bars)
@@ -64,23 +66,35 @@ def get_predictions_bool(model, X):
 
 # Evaluates single image
 def find_uncertainty(image, b_preds, model):
-
+    """ Return shape (n_labels) with uncertain labels as true  """
     image = expand_dims(convert_to_tensor(image),0)
 
-    values = np.empty(cnf.n_samples, cnf.n_labels)
+    values = np.empty((cnf.n_samples, cnf.n_labels))
     for k in range(cnf.n_samples): # collect samples from n_samples-subnetworks
         pred = model(image, training=True)[0]
         values[k] = pred
 
-    mu = np.mu(values, axis=0)
+    mu = np.mean(values, axis=0)
     var = np.var(values, axis=0)
     sig = np.sqrt(var)
+
+    below_thres = (mu - (2 * sig)) <= cnf.threshold
     
-    uncertain = np.where(b_preds and cnf.threshold <= mu - (2 * sig), True, False)
+    uncertain = b_preds & below_thres
     
     return uncertain
 
 def history_merge(hists, eps, loss_measurement, measurement):
+    """ 
+        This concatenates the different histories into one cohesive history
+
+        hists: list of history's returned from different training
+        eps: list of epoch's returned from different training
+
+        return: np.array ndim:(4,total_training_epochs)
+        The 4 dims are, train
+  
+    """
 
     full_hist = np.empty((4, np.sum(eps)))
     cum_e = np.cumsum(eps)
@@ -94,3 +108,12 @@ def history_merge(hists, eps, loss_measurement, measurement):
 
         prev = ce
     return full_hist
+
+# set legend for all axes
+def axs_legend(axs):
+    for ax in axs.reshape(-1):
+        ax.legend()
+# set grid for all axes
+def axs_grid(axs):
+    for ax in axs.reshape(-1):
+        ax.grid()

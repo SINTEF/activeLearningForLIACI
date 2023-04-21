@@ -61,8 +61,12 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     for ce in cum_e:
         axs[0].axvline(ce, linestyle='dashed', linewidth=1,c='red')
         axs[1].axvline(ce, linestyle='dashed', linewidth=1,c='red')
-    plot_history(axs[0], total_epochs, full_hist[:2], subfig_text='Loss function')
-    plot_history(axs[1], total_epochs, full_hist[2:], subfig_text='Binary accuracy')
+    plot_history(axs[0], total_epochs, full_hist[:2])
+    plot_history(axs[1], total_epochs, full_hist[2:])
+    
+    axs[0].title.set_text('Loss function')
+    axs[1].title.set_text('Binary accuracy')
+
     axs[0].set_ylim(top=0.4)
     axs[1].set_ylim(bottom=0.81)
 
@@ -84,8 +88,11 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     )
     fig, axs = plt.subplots(1,2)
 
-    plot_history(axs[0], e, h, 'loss', 'Loss function')
-    plot_history(axs[1], e, h, 'binary_accuracy', 'Binary accuracy')
+    plot_history(axs[0], e, h, 'loss')
+    plot_history(axs[1], e, h, 'binary_accuracy')
+
+    axs[0].title.set_text('Loss function')
+    axs[1].title.set_text('Binary accuracy')
 
     ## Set axs info
     axs[0].set_ylim(top=0.4)
@@ -101,12 +108,15 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     fig, axs = plt.subplots(1,2)
     # Plot both models, un-normalized
     ## Plotting regular model
-    plot_history(axs[0], e, h, measurement='loss', subfig_text='Loss function')
-    plot_history(axs[1], e, h, measurement='binary_accuracy', subfig_text='Binary accuracy')
+    plot_history(axs[0], e, h, measurement='loss')
+    plot_history(axs[1], e, h, measurement='binary_accuracy')
 
     ## Plotting incremental model
-    plot_history(axs[0], total_epochs, full_hist[:2], subfig_text='Loss function')
-    plot_history(axs[1], total_epochs, full_hist[2:], subfig_text='Binary accuracy')
+    plot_history(axs[0], total_epochs, full_hist[:2])
+    plot_history(axs[1], total_epochs, full_hist[2:])
+    axs[0].title.set_text('Loss function')
+    axs[1].title.set_text('Binary accuracy')
+
 
     ## Set axs info
     axs[0].set_ylim(top=0.4)
@@ -151,7 +161,7 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget):
     fig.tight_layout()
     fig.savefig('../out_imgs/incremental_learning/'+'incr_both_normalized.png')
     if measure_time:
-        printo(f'5th fig done after {t()} since start')
+        printo(f'4th fig done after {t()} since start')
 
 def main():
     # Load parameters from old model
