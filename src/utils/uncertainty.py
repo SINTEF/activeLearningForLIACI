@@ -23,8 +23,7 @@ def find_uncertainty(image, b_preds, pre_proc, feature_extractor, classifier):
     var = np.var(values, axis=0)
     sig = np.sqrt(var)
 
-    below_thres = (mu - (2 * sig)) <= cnf.threshold
-    
+    below_thres = (mu - (2 * sig)) < cnf.threshold
     uncertain = b_preds & below_thres
     
     return uncertain
