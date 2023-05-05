@@ -10,9 +10,9 @@ from PIL import Image
 import numpy as np
 from matplotlib import cm
 
-from utils import open_video_b64
+from utils.utils import open_video_b64
 from prints import printe, printo
-import config as cnf
+import utils.config as cnf
 
 def get_callbacks(app, af):
     

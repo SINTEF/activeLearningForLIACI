@@ -26,17 +26,12 @@ def open_video_b64(path):
             video = "data:video/mp4;base64," +  base64.b64encode(videoFile.read()).decode('ascii')
     return video
 
-
-
 def get_predictions_bool(model, X):
     preds = model.predict(X)
     predictions_bool = np.where(cnf.threshold <= preds, True, False)
     return predictions_bool, preds
 
-
-
-
-def history_merge(hists, eps, loss_measurement, measurement):
+def history_merge(hists, eps, loss_measurement='loss', measurement='binary_accuracy'):
     """ 
         This concatenates the different histories into one cohesive history
 
@@ -53,10 +48,16 @@ def history_merge(hists, eps, loss_measurement, measurement):
 
     prev = 0
     for h, e, ce in zip(hists, eps, cum_e):
-        full_hist[0, prev:ce] = np.array(h.history[loss_measurement])
-        full_hist[1, prev:ce] = np.array(h.history['val_' + loss_measurement])
-        full_hist[2, prev:ce] = np.array(h.history[measurement])
-        full_hist[3, prev:ce] = np.array(h.history['val_' + measurement])
+        if type(h) is int: # If training was skipped fill with previous value
+            full_hist[0, prev:ce].fill(full_hist[0, prev-1]) 
+            full_hist[1, prev:ce].fill(full_hist[1, prev-1])
+            full_hist[2, prev:ce].fill(full_hist[2, prev-1])
+            full_hist[3, prev:ce].fill(full_hist[3, prev-1])
+        else:
+            full_hist[0, prev:ce] = np.array(h.history[loss_measurement])
+            full_hist[1, prev:ce] = np.array(h.history['val_' + loss_measurement])
+            full_hist[2, prev:ce] = np.array(h.history[measurement])
+            full_hist[3, prev:ce] = np.array(h.history['val_' + measurement])
 
         prev = ce
     return full_hist

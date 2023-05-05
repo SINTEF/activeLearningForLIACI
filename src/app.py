@@ -10,8 +10,8 @@ from shutil import rmtree
 
 from self_annotation import create_label_file
 from app_functions import AppFunc, generate_label_alerts
-import config as cnf
-from utils import open_video_b64
+import utils.config as cnf
+from utils.utils import open_video_b64
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes.BOOTSTRAP, dbc.icons.FONT_AWESOME]

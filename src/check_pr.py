@@ -3,7 +3,7 @@ from pipeline import pipeline_start
 from data import load_from_coco
 from tqdm import tqdm
 from prints import printc
-import config as cnf
+import utils.config as cnf
 from utils import get_dict_from_file
 
 

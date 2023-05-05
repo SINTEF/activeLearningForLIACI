@@ -6,7 +6,7 @@ import numpy as np
 from data import get_cat_lab
 import matplotlib.pyplot as plt
 from utils import get_axs_iter
-import config as cnf
+import utils.config as cnf
 
 
 

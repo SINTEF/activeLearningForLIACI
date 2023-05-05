@@ -6,6 +6,7 @@ model_path = '../benchmarks/' + curr_bench + '/epochs-30_batchsize-50_lr-0.0004_
 new_images_dir = '../user_annotations/'
 
 threshold = 0.35
+fraction = 0.3
 wiggle_room = 0.06
 n_samples = 100
 # n_samples = 3

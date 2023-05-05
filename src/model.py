@@ -4,7 +4,7 @@ from tensorflow.keras.applications.mobilenet import MobileNet
 
 from tensorflow.keras.layers import Dropout, GlobalAveragePooling2D, Conv2D, Reshape, Activation, Dense, Resizing, Rescaling, RandomFlip, RandomRotation
 from tensorflow.keras import Sequential
-from tensorflow.keras.models import load_model
+from tensorflow.keras.models import load_model, clone_model
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.metrics import BinaryAccuracy
 
@@ -12,25 +12,14 @@ from tensorflow.keras.metrics import BinaryAccuracy
 import numpy as np
 from prints import printw, printc, printo, printe
 import matplotlib.pyplot as plt
-
+from utils.file import get_dict_from_file
+import utils.config as cnf
+from utils.model import preproc_model_create, aug_model_create, mobilenet_create, classifier_create, hullifier_compile,hullifier_load, hullifier_save, get_lr
 
 model_path = 'models/my_model'
 onnx_path = 'models/model.onnx'
 
-def aug_model_create():
-    data_augmentation = Sequential([
-        RandomFlip("horizontal_and_vertical"),
-        RandomRotation(0.2),
-    ])
-    return data_augmentation
 
-def preproc_model_create(resize=False, target_size=224):
-    preproc_model = Sequential()
-    if resize:
-        preproc_model.add(Resizing(target_size,target_size)) 
-    preproc_model.add(Rescaling(1./127.5, offset=-1))
-    
-    return preproc_model 
 
 
 def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs):
@@ -65,98 +54,60 @@ def summarize_diagnostics(history, epochs, path='../out_imgs/loss_acc', **kwargs
     fig.savefig(path+ params + '.png')
     # plt.show()
 
-def train(model, X, Y, validation_data, batch_size=50, epochs=10):
 
-    history = model.fit(
-        x=X,
-        y=Y,
-        epochs=epochs,
-        batch_size=batch_size,
-        validation_data=validation_data,
-    )
-    return history, epochs
-
-def mobilenet_create(v2=False):
-    if v2:
-        mobilenet = MobileNetV2(include_top=False)
-        # mobilenet = load_model('/models/mobilenet/')
+def hullifier_create(X=None, n_cats=9, lr=2e-4, v2=False, resize=False):
+    pre_proc = preproc_model_create(resize)
+    augmentation = aug_model_create()
+    mobilenet = mobilenet_create(v2=v2)
+    if X is None:
+        d_shape = (None,7,7,1024)
     else:
-        mobilenet = MobileNet(include_top=False) # Don't include FC-layer/classifiers)
-        # mobilenet = load_model('/models/mobilenet_v2/')
-    # mobilenet.summary()
+        d_shape = mobilenet.predict(X).shape
+
+    classifier = classifier_create(d_shape, n_cats, v2)
+
+    hullifier = Sequential(name = 'Hullifier_v2')
+    for l in pre_proc.layers:
+        hullifier.add(l)
+    for l in augmentation.layers:
+        hullifier.add(l)
     for l in mobilenet.layers:
-        l.trainable = False
-    return mobilenet
+        hullifier.add(l)
+    for l in classifier.layers:
+        hullifier.add(l)
 
-def model_create(d_shape, n_cats=9, v2=False):
-    if v2:
-        model = Sequential(name="hullifier_0.02")
+    hullifier_compile(hullifier, lr)
+ 
+    return hullifier
 
-        model.add(GlobalAveragePooling2D())
-        model.add(Dense(n_cats, activation='sigmoid'))
-        
+# clones the old hullifier into a new one
+# PS this also has no sub sequentiasls
+def hullifier_clone(hullifier=None):
+    """ hullifier: if None then the old hullifier is loaded 
+    """
+    if hullifier is None:
+        params = get_dict_from_file(cnf.model_path + 'params.txt')
+        hullifier = hullifier_load(cnf.model_path)
+        lr = float(params.lr)
     else:
-        # Create my own classifier to train
-        model = Sequential(name="hullifier_0.01")
-
-        model.add(GlobalAveragePooling2D(keepdims=True))
-        model.add(Dropout(0.01))
-        # model.add(Dropout(0.1))
-        # model.add(Dropout(0.2))
-        model.add(Conv2D(filters=n_cats, kernel_size=(1,1), padding='same', activation='linear'))
-        model.add(Reshape((n_cats,)))
-        model.add(Activation('sigmoid'))
-    
+        lr = get_lr(hullifier)
+        
+    # model = clone_model(hullifier)
+    model = hullifier_create(lr=lr)
+    hullifier_compile(model, lr=lr)
+    model.build((None, 224, 224, 3) )
+    model.set_weights(hullifier.get_weights())
     return model
 
-def hullifier_load(path, resize=False):
-    print(f'Trying to load model from: {path}')
-    hullifier = load_model(path)
-    if resize and type(hullifier.layers[0]) != Resizing:
-        hullifier = Sequential([Resizing(224,224), hullifier])
-    return hullifier
 
-def hullifier_compile(model, lr=2e-4):
-    model.compile(
-        optimizer = RMSprop(learning_rate=lr), 
-        loss = 'binary_crossentropy',
-        metrics=[BinaryAccuracy()]
-    )
-def hullifier_create(X, n_cats=9, lr=2e-4, v2=False, resize=False):
-    mobilenet = mobilenet_create(v2=v2)
-    d_shape = mobilenet.predict(X).shape
-    classifier = model_create(d_shape, n_cats, v2)
-
-    hullifier = Sequential()
-    hullifier.add(preproc_model_create(resize))
-    hullifier.add(aug_model_create())
-    hullifier.add(mobilenet)
-    hullifier.add(classifier)
-    hullifier_compile(hullifier, lr)
-    hullifier.compile(
-        optimizer = RMSprop(learning_rate=lr), 
-        loss = 'binary_crossentropy',
-        metrics=[BinaryAccuracy()]
-    )
-    return hullifier
-
-
-def hullifier_save(model, path, **kwargs):
-    model.save(path)
-    params = ''
-    for k,v in kwargs.items():
-        params += f'{k}={v}\n'
-
-    with open(path + '/params.txt', 'w+') as f:
-        f.write(params) 
     
 def main():
     pass
-    # mobilenet = mobilenet_create()
+    mobilenet = mobilenet_create()
     # mobilenet = mobilenet_create(
     #     v2=True
     #     )
-    # model = model_create(
+    # model = classifier_create(
     #     # (1,7,7,1024),
     #     (1,7,7,1280), v2=True
     # )

@@ -13,14 +13,16 @@ import matplotlib.pyplot as plt
 from base64 import b64decode
 from tqdm import tqdm
 import os
+from time import time 
 
-from utils import get_dict_from_file, find_uncertainty
+from utils.file import get_dict_from_file
+from utils.uncertainty import find_uncertainty
+from utils.model import train, hullifier_load
+import utils.config as cnf
+
 from self_annotation import add_annotated_im, load_from_user_ann
 from data import get_cat_lab, load_from_coco, shuffle_data, split_data
-from model import hullifier_load, train
-from prints import printo, printe, printw
-import config as cnf
-from time import time 
+from prints import printo, printe, printw, printc
 
 def generate_label_alerts():
                                     # html.I(className="bi bi-info-circle-fill me-2"),
@@ -159,14 +161,19 @@ class AppFunc:
     def find_uncertainties(self):
         uncertainties = np.empty(self.tnf, self.labels.shape[0])
         
+        s = time()
         self.vid.set(cv2.CAP_PROP_POS_FRAMES, 0) # make sure video is set to idx=0
-        for i in tqdm(range(self.tnf)):
+        for i in tqdm(range(self.tnf, step=int(self.fps))):
+            self.vid.self.vid.set(cv2.CAP_PROP_POS_FRAMES, i)
             succ, im = self.vid.read()
-            if not succ or np.sum(self.predictions_bool[i]) == 0:
+            if not succ or self.predictions_bool[i].sum() == 0:
                 uncertainties[i] = np.zeros(self.labels.shape[0])
             else:
                 im = cv2.resize(im, (224,224)).astype(np.uint8)
                 uncertainties[i] = find_uncertainty(im, self.predictions_bool[i], self.model)
+
+        tm = int(time()-s)
+        printc(f'Used {tm//60}m {tm%60}s')
 
         return uncertainties
 
