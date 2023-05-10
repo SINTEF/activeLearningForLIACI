@@ -50,7 +50,6 @@ def incrementally_train(X, Y, XT, YT, lr, epochs, image_budget, fraction, do_all
             X_train = X[:cb]
             Y_train = Y[:cb]
         else:
-            print(f'training on idx[{prev}:{cb}]')
             X_train = X[prev:cb]
             Y_train = Y[prev:cb]
         h, e = train(

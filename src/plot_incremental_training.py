@@ -67,9 +67,13 @@ def plot_trainings(path_to_dir, npy_fns, p_fn):
         axs[1].title.set_text('Binary accuracy')
         axs[0].set_xlabel('Training period (normalized)')
         axs[1].set_xlabel('Training period (normalized)')
+        axs[0].legend(loc = 'lower left')
+        axs[1].legend(loc = 'upper left')
+        if not i:
+            axs[0].get_legend().remove()
+            axs[1].get_legend().remove()
         fig.suptitle(f"Loss and accuracy graph for model trained incrementally")
         fig.set_figheight(7.5)
-
         axs[0].set_ylim(top=0.3)
         axs[1].set_ylim(bottom=0.86)
         axs[0].set_xlim(left=0, right=1)
@@ -81,8 +85,8 @@ def plot_trainings(path_to_dir, npy_fns, p_fn):
 
 def plot_training(axs, total_epochs, full_hist, label_pf, variation):
     
-    ax_plot_training(axs[0], total_epochs, full_hist[:2], label_pf=label_pf, variation=variation)
-    ax_plot_training(axs[1], total_epochs, full_hist[2:], label_pf=label_pf, variation=variation)
+    ax_plot_training(axs[0], total_epochs, full_hist[:2], label_pf=label_pf, variation=variation, lsr=1)
+    ax_plot_training(axs[1], total_epochs, full_hist[2:], label_pf=label_pf, variation=variation, lsr=1)
     
 
 
@@ -90,11 +94,12 @@ def plot_training(axs, total_epochs, full_hist, label_pf, variation):
 
 def main():
     
-    npy_fns = ['regular']
+    npy_fns = []
     to = 10
     for fraction in np.linspace(0.1, to/10, to):
         fn = 'f' + str(fraction.round(2))
         npy_fns.append(fn) 
+    npy_fns.append('regular')
     print('going through', npy_fns)
 
     p_fn = 'normalized_trained'

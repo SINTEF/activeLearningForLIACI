@@ -30,6 +30,7 @@ def plot_pdf(mu, std, pred, label,  ax):
     ax.plot(x, stats.norm.pdf(x, mu, std), label=f'Class {label}, $\sigma={np.round(std, 4)}$')
     color = ax.lines[-1].get_color() # get color from last plot
     ax.scatter(mu-2*std, stats.norm.pdf(mu-2*std, mu,std), c=color, marker='X')
+    
     ax.axvline(pred, c=color, linestyle='dashdot', label=f'Original class output value')
     
     
@@ -60,9 +61,10 @@ def plot_im_tl_ms_pdf(sample_data, b_preds, preds, axs):
 
     x_prog = np.arange(mu_prog.shape[1])
 
+    axs[0].axvline(cnf.threshold, c='red', linestyle='dashed')
     for label, mu, std, mp, sp, p in zip(an_labels, pdf_mus, pdf_sigs, mu_prog, sig_prog, preds):        
-        if not std.round(3) == 0:
-            plot_pdf(mu, std, p, label, axs[0])
+        # if not std.round(3) == 0:
+        plot_pdf(mu, std, p, label, axs[0])
         axs[1].plot(x_prog, sp, label=f'{label} $\sigma$')
         axs[2].plot(x_prog, mp, label=f'{label} $\mu$')
 
@@ -84,7 +86,7 @@ def plot_im_tl_ms_pdf_create(sample_data, b_preds, preds, path_to_dir):
 
     axs[0].set_xlim([0,1])
     axs[0].set_ylim(bottom=0)
-    axs[0].set_xlabel('Output neruon value after sigmoid activation')
+    axs[0].set_xlabel('Output neuron value after sigmoid activation')
     
     fig.set_figheight(10)
     fig.suptitle('Probability density function, and $\sigma$ & $\mu$ progression throughout all samples, for the annotated labels', wrap=True)

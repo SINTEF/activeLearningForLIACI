@@ -19,17 +19,18 @@ def plot_history(ax, e, h, measurement=None, subfig_text=None, label='train', la
         ax.plot(e, h[0], label=label)
         ax.plot(e, h[1], label=label_t)
 
-    ax.title.set_text(subfig_text)
+    if subfig_text:
+        ax.title.set_text(subfig_text)
     ax.set_xlabel('Epoch')
     ax.grid(visible=True)
     ax.legend()
 
-def ax_plot_training(ax, eps, h, subfig_text=None, label_pf='', normalized=True, variation=0, lsr=1):
+def ax_plot_training(ax, eps, h, subfig_text=None, label_pf='', variation=0, lsr=0, legend=True):
     """ variation: if 1 only plot train, if -1 only plot test, if 0 plot both
         lsr: linspace range
     """
 
-    eps = np.linspace(0, lsr, eps) if normalized else np.arange(1, eps+1)
+    eps = np.linspace(0, lsr, eps) if lsr else np.arange(1, eps+1)
 
     if variation == 1:
         ax.plot(eps, h[0], label=label_pf+'train')
@@ -40,9 +41,9 @@ def ax_plot_training(ax, eps, h, subfig_text=None, label_pf='', normalized=True,
         ax.plot(eps, h[1], linestyle='dashed', label=label_pf+'test')
     if subfig_text:
         ax.title.set_text(subfig_text)
-    # ax.set_xlabel('Epoch')
     ax.grid(visible=True)
-    ax.legend()
+    if legend:
+        ax.legend()
     
 # set legend for all axes
 def axs_legend(axs):

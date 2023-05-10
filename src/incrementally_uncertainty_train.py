@@ -1,13 +1,19 @@
 import numpy as np
-from tensorflow.keras.models import clone_model
+from tensorflow.keras.models import Model
 import matplotlib.pyplot as plt
 import time
 from tqdm import tqdm
-import config as cnf
+
+from model import hullifier_clone
 from prints import printe, printo, printw, printc
-from model import hullifier_load, hullifier_compile, hullifier_create, train
 from data import load_from_coco, shuffle_data, split_data
-from utils import get_dict_from_file, plot_history, find_uncertainty, history_merge, get_predictions_bool
+from model import hullifier_create
+
+from utils.model import hullifier_compile, classifier_create, train, preproc_model_create, get_lr, hullifier_save
+from utils.utils import history_merge, get_predictions_bool
+from utils.file import get_dict_from_file
+from utils.uncertainty import find_uncertainty, get_feature_extractor
+import utils.config as cnf
 
 
 measure_time = True
@@ -42,26 +48,62 @@ def t():
 # []
 # [] Compare results
 # []
+def save_values(path, eps, full_hist_0, full_hist_1, full_hist_2, full_hist_3):
+    print('Saving values to:', path)
+    with open(path, 'wb') as f:
+        np.save(f, eps)
+        np.save(f, full_hist_0)
+        np.save(f, full_hist_1)
+        np.save(f, full_hist_2)
+        np.save(f, full_hist_3)
+    
+def get_classifier(model):
+    lr = get_lr(model)
+
+    # Create classifier
+    classifier = classifier_create(dr_rate=0.1)
+    hullifier_compile(classifier, lr) # Compile
+    classifier.build((None, 7, 7, 1024)) # and Build
+
+    classifier.set_weights(model.get_weights()[-len(classifier.get_weights()):]) # Set current models weights
+
+    return classifier
+
+# get feature extrctor and classifier
+def get_pp_fe_clsf(model): 
+
+    pre_proc = preproc_model_create()
+    f_ext = get_feature_extractor(model)
+    classifier = get_classifier(model)
+    
+    return pre_proc, f_ext, classifier
+
 def monte_carlo(predictions_bool, images, model):
+    
+    
     uncertainties = np.empty(images.shape[0])
-    for i, (image, pred) in tqdm(enumerate(zip(images, predictions_bool))):
-        uncertainties[i] = find_uncertainty(image, pred, model).sum()
+    pre_proc, fe, classifier = get_pp_fe_clsf(model)
+    for i, (image, pred) in tqdm(enumerate(zip(images, predictions_bool))):        
+        uncertainties[i] = find_uncertainty(image, pred, pre_proc, fe, classifier).sum()
+
     return uncertainties
 
 def wiggle_room(predictions):
     uncertainties = np.where(np.abs(predictions - cnf.threshold) <= cnf.wiggle_room, True, False).sum(1)
     return uncertainties
 
-def training(image_budget, epochs, lr, X, Y, XT, YT, uncertainty=True, mc=True, budget_limit=False):
+def training(image_budget, epochs, lr, X, Y, XT, YT, model_path, uncertainty=True, mc=True, budget_limit=False):
     """ uncertainty: Is true if model is trained on uncertain images 
         mc: Is true if monte carlo computation should be used, False indicates wiggleroom tech 
     """
     
     cum_bud = np.cumsum(image_budget)
-    incr_epochs = int(epochs * 0.2)
+    incr_epochs = int(epochs * cnf.fraction)
 
-    model = hullifier_create(X[:3], lr=lr)    
-    
+    model = hullifier_create(lr=lr)
+    model.predict(X[:2])
+    model = hullifier_clone(model)
+
     full_hist = []
     eps = []
     
@@ -96,7 +138,7 @@ def training(image_budget, epochs, lr, X, Y, XT, YT, uncertainty=True, mc=True, 
         highest = np.argsort(uncertainties) # get sorted indices
         indices = highest[-budget_limit:] # Only keep indices inside budget, if budget is false all indices are kept
         mask = np.zeros_like(uncertainties, dtype=bool)
-        mask[indices] = True # Set uncertain indices True
+        mask[indices] = uncertainties[indices].astype(bool) # Set uncertai/n indices True
 
         # Mask is True for all images/indices that will be deleted
 
@@ -107,12 +149,12 @@ def training(image_budget, epochs, lr, X, Y, XT, YT, uncertainty=True, mc=True, 
         new_Y = np.delete(Y[im_slice], mask, axis=0)
             
         print(f'Mask removed {np.sum(mask)} images. Kept {np.sum(np.invert(mask))} images. New X is shape: {new_X.shape}')
+        eps.append(incr_epochs) 
 
-        if new_X.shape[0] == 0: # All images masked out
+        if new_X.shape[0] == 0: # If all images masked out
             skips += 1
+            full_hist.append(incr_epochs)
             printe("Chaught skip!")
-            exit()
-            # print('skipping')
             continue
             
         training_X = np.concatenate((training_X, new_X), 0)
@@ -127,32 +169,33 @@ def training(image_budget, epochs, lr, X, Y, XT, YT, uncertainty=True, mc=True, 
             epochs=incr_epochs,
             validation_data=(XT,YT),
         )
-
         full_hist.append(h)
-        eps.append(e)
+        # eps.append(e)
         
     if skips:
         printw(f'Skipped {skips} batche(s) because no images were uncertain={uncertainty}')
-        input('Continue?')
+        # input('Continue?')
+    hullifier_save(model, model_path, lr=get_lr(model), total_epochs=np.sum(eps))
     return full_hist, eps
 
 
 
 
 
-def incrementally_uncertainty_train(X, Y, XT, YT, lr, epochs, image_budget):
-    
-    full_hist_0, eps_0 = training(image_budget, epochs, lr, X, Y, XT, YT, uncertainty=True, mc=True)
+def incrementally_uncertainty_train(X, Y, XT, YT, lr, epochs, image_budget, budget=0):
+
+    path='models/iuc_models/'+ ('any' if budget else 'budget') +'/mcu'
+    full_hist_0, eps_0 = training(image_budget, epochs, lr, X, Y, XT, YT, path, uncertainty=True, mc=True, budget_limit=budget)
     eps = np.array(eps_0)
     full_hist_0 = history_merge(np.array(full_hist_0), eps, 'loss', 'binary_accuracy')
-
     
     if measure_time:
         printo(f'1st done after {t()} since start')
 
 # ==========================================================================================================================================
 
-    full_hist_1, _ = training(image_budget, epochs, lr, X, Y, XT, YT, uncertainty=False, mc=True)
+    path='models/iuc_models/'+ ('any' if budget else 'budget') +'/mcc'
+    full_hist_1, _ = training(image_budget, epochs, lr, X, Y, XT, YT, path, uncertainty=False, mc=True, budget_limit=budget)
     full_hist_1 = history_merge(np.array(full_hist_1), eps, 'loss', 'binary_accuracy')
 
 
@@ -161,7 +204,8 @@ def incrementally_uncertainty_train(X, Y, XT, YT, lr, epochs, image_budget):
 
 # ==========================================================================================================================================
 
-    full_hist_2, _ = training(image_budget, epochs, lr, X, Y, XT, YT, uncertainty=True, mc=False)
+    path='models/iuc_models/'+ ('any' if budget else 'budget') +'/tiu'
+    full_hist_2, _ = training(image_budget, epochs, lr, X, Y, XT, YT, path, uncertainty=True, mc=False, budget_limit=budget)
     full_hist_2 = history_merge(np.array(full_hist_2), eps, 'loss', 'binary_accuracy')
 
 
@@ -171,7 +215,8 @@ def incrementally_uncertainty_train(X, Y, XT, YT, lr, epochs, image_budget):
 
 # ==========================================================================================================================================
 
-    full_hist_3, _ = training(image_budget, epochs, lr, X, Y, XT, YT, uncertainty=False, mc=False)
+    path='models/iuc_models/'+ ('any' if budget else 'budget') +'/tic'
+    full_hist_3, _ = training(image_budget, epochs, lr, X, Y, XT, YT, path, uncertainty=False, mc=False, budget_limit=budget)
     full_hist_3 = history_merge(np.array(full_hist_3), eps, 'loss', 'binary_accuracy')
 
     # suptitle = f"Loss and accuracy graph for model trained incrementally and with certain images"
@@ -179,41 +224,8 @@ def incrementally_uncertainty_train(X, Y, XT, YT, lr, epochs, image_budget):
     
     if measure_time:
         printo(f'4th done after {t()} since start')
-
-# ==========================================================================================================================================
-    # fig, axs = plt.subplots(1)
-    # total_epochs = plot_seperate_epochs(eps_3)
+    return eps, full_hist_0, full_hist_1, full_hist_2, full_hist_3
     
-    
-    # plot_history(axs[0], total_epochs, full_hist_0[:2], subfig_text='Loss function')
-    # plot_history(axs[1], total_epochs, full_hist_0[2:], subfig_text='Binary accuracy')
-    # plot_history(axs[0], total_epochs, full_hist_1[:2], subfig_text='Loss function')
-    # plot_history(axs[1], total_epochs, full_hist_1[2:], subfig_text='Binary accuracy')
-
-# ==========================================================================================================================================
-    # fig, axs = plt.subplots(1)
-    
-    # total_epochs = plot_seperate_epochs(eps_3)
-    
-    
-    # plot_history(axs[0], total_epochs, full_hist_0[:2], subfig_text='Loss function')
-    # plot_history(axs[1], total_epochs, full_hist_0[2:], subfig_text='Binary accuracy')
-    # plot_history(axs[0], total_epochs, full_hist_1[:2], subfig_text='Loss function')
-    # plot_history(axs[1], total_epochs, full_hist_1[2:], subfig_text='Binary accuracy')
-# ==========================================================================================================================================
-    # plot all in same figure
-
-    # fig.tight_layout()
-    # fig.savefig('../out_imgs/incrementally_uncertain/'+'all_trained.png')
-    # if measure_time:
-        # printo(f'5th fig done after {t()} since start')
-
-    with open('npy/'+'iut.npy', 'wb') as f:
-        np.save(f, eps)
-        np.save(f, full_hist_0)
-        np.save(f, full_hist_1)
-        np.save(f, full_hist_2)
-        np.save(f, full_hist_3)
     
         
         
@@ -227,29 +239,38 @@ def main():
     # params.epochs += 5
     # params.epochs += 5
     # params.epochs = 5
-    # params.epochs = 1
+    # params.epochs = 10
     
     # Load all the old data
-    X, Y = load_from_coco()
-    X, Y = shuffle_data(X,Y)
-    # Original split
-    X,Y,XT,YT = split_data(X,Y,float(params.v_split))    
+    X_original, Y_original = load_from_coco()
+    for seed in range(10):
+        X, Y = shuffle_data(X_original, Y_original, seed)
+        # Original split
+        X,Y,XT,YT = split_data(X,Y,float(params.v_split))    
+        crt_bud = 35
+        image_budget = np.array([
+            800, 
+            103, # 1
+            100, # 2
+            100, # 3
+            100, # 4
+            100, # 5
+            100, # 6
+            100, # 7
+            100, # 8
+            100  # 9
+        ])
 
-    image_budget = np.array([
-        800, 
-        103, # 1
-        100, # 2
-        100, # 3
-        100, # 4
-        100, # 5
-        100, # 6
-        100, # 7
-        100, # 8
-        100  # 9
-    ])
+        path = 'npy/mean_iut/any/'+'iut'+str(seed)+'.npy'
+        eps, fh0, fh1, fh2, fh3 = incrementally_uncertainty_train(X, Y, XT, YT, float(params.lr), params.epochs, image_budget)
+        save_values(path, eps, fh0, fh1, fh2, fh3)
+        printo(f'Seed {seed} "Any" training done {t()} since start')
 
-    incrementally_uncertainty_train(X, Y, XT, YT, float(params.lr), params.epochs, image_budget)
 
+        path = 'npy/mean_iut/budget/'+'iut'+str(seed)+'.npy'
+        eps, fh0, fh1, fh2, fh3 = incrementally_uncertainty_train(X, Y, XT, YT, float(params.lr), params.epochs, image_budget, crt_bud)
+        save_values(path, eps, fh0, fh1, fh2, fh3)
+        printo(f'Seed {seed} "budget" training done {t()} since start')
 
 if __name__ == "__main__":
     main()
