@@ -1,0 +1,14 @@
+{
+    "labels": {
+        "0": "sea_chest_grating",
+        "1": "paint_peel",
+        "2": "over_board_valve",
+        "3": "defect",
+        "4": "corrosion",
+        "5": "propeller",
+        "6": "anode",
+        "7": "bilge_keel",
+        "8": "marine_growth"
+    },
+    "images": {}
+}
