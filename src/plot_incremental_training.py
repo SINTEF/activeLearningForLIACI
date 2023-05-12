@@ -36,9 +36,9 @@ def plot_trainings(npy_fns, end_sup_tit, path_to_dir, p_fn=''):
     figs = [fig_0, fig_1, fig_2]
     axss = [axs_0, axs_1, axs_2]
     variations_pretty = [
-        'Test l', 
-        'L', 
-        'Train l'
+        'Test', 
+        'Train & test', 
+        'Train'
     ]
     for i, (fig, axs, v) in enumerate(zip(figs, axss, variations_pretty), -1): 
         for fn in npy_fns:
@@ -54,18 +54,14 @@ def plot_trainings(npy_fns, end_sup_tit, path_to_dir, p_fn=''):
         axs[1].title.set_text('Binary accuracy')
         axs[0].set_xlabel('Training period (normalized)')
         axs[1].set_xlabel('Training period (normalized)')
-        axs[0].legend(loc = 'lower left')
-        axs[1].legend(loc = 'upper left')
-        if not i:
-            axs[0].get_legend().remove()
-            axs[1].get_legend().remove()
-        fig.suptitle(v+f"oss and accuracy graph for model trained incrementally on "+end_sup_tit, wrap=True)
+        
+        fig.suptitle(v+f" loss and accuracy graph for models trained incrementally on "+end_sup_tit, wrap=True)
         fig.set_figheight(7.5)
         axs[0].set_ylim(top=0.3)
         axs[1].set_ylim(bottom=0.86)
         axs[0].set_xlim(left=0, right=1)
         axs[1].set_xlim(left=0, right=1)
-    
+        
     if p_fn:
         for fig,v in zip(figs, variations):
             save_fig(base_dir+path_to_dir,p_fn+v, fig)
@@ -78,10 +74,13 @@ def save_figs(figs, ptd, fn):
 
 def plot_training(axs, total_epochs, full_hist, label_pf, variation):
     
-    ax_plot_training(axs[0], total_epochs, full_hist[:2], label_pf=label_pf, variation=variation, lsr=1)
-    ax_plot_training(axs[1], total_epochs, full_hist[2:], label_pf=label_pf, variation=variation, lsr=1)
+    ax_plot_training(axs[0], total_epochs, full_hist[:2], label_pf=label_pf, variation=variation, lsr=1, legend=False)
+    ax_plot_training(axs[1], total_epochs, full_hist[2:], label_pf=label_pf, variation=variation, lsr=1, legend=False)
 
-
+def set_global_figs_label(figs,axss, x, y):
+    for fig, axs in zip(figs, axss):
+        handles, labels = axs[0].get_legend_handles_labels()
+        fig.legend(handles, labels, bbox_to_anchor=(x, y))
 def main():
     
     npy_fns = []
@@ -102,6 +101,8 @@ def main():
     #Train
     axss[2][0].set_ylim([0.16,0.25])
     axss[2][1].set_ylim([0.89,0.935])
+    set_global_figs_label([figs[0],figs[2]], [axss[0],axss[2]], 0.35, 0.6)
+    
     save_figs(figs, dir, p_fn)
 
     dir = 'new/'
@@ -116,6 +117,8 @@ def main():
     #Train
     axss[2][0].set_ylim([0.17,0.31])
     axss[2][1].set_ylim([0.85,0.935])
+    set_global_figs_label([figs[0],figs[2]], [axss[0],axss[2]], 0.32, 0.6)
+    
     save_figs(figs, dir, p_fn)
     
     pass
