@@ -6,6 +6,13 @@ from prints import printc, printe
 
 
 ptd = 'npy/incr/'
+variations = [
+    '_test', 
+    '', 
+    '_train'
+]
+
+base_dir = '../out_imgs/incremental_learning/'
 
 def get_values(path_to_dir, file_name):
     path = path_to_dir+file_name+'.npy'
@@ -19,41 +26,21 @@ def get_values(path_to_dir, file_name):
 
     return eps, fh
 
-# def plot_regular_training(eps, fh):
-
-#     fig, axs = plt.subplots(1,2)
-
-    
-
-#     plot_history(axs[0], eps, fh, 'loss')
-#     plot_history(axs[1], eps, fh, 'binary_accuracy')
-
-#     axs[0].title.set_text('Loss function')
-#     axs[1].title.set_text('Binary accuracy')
-
-#     ## Set axs info
-#     axs[0].set_ylim(top=0.4)
-#     axs[1].set_ylim(bottom=0.81)
-    
-#     ## Set fig info
-#     fig.suptitle(f"Loss and accuracy graph for\nmodel trained traditionally")
-#     fig.tight_layout()
-#     fig.savefig('../out_imgs/incremental_learning/'+'incr_regular_trained.png')
-
-def plot_trainings(path_to_dir, npy_fns, p_fn):
+def plot_trainings(npy_fns, end_sup_tit, path_to_dir, p_fn=''):
     full_hists = []
 
-    variations = [
-        '_test', 
-        '', 
-        '_train'
-    ]
+    
     fig_0, axs_0 = plt.subplots(2)
     fig_1, axs_1 = plt.subplots(2)
     fig_2, axs_2 = plt.subplots(2)
     figs = [fig_0, fig_1, fig_2]
     axss = [axs_0, axs_1, axs_2]
-    for i, (fig, axs) in enumerate(zip(figs, axss), -1): 
+    variations_pretty = [
+        'Test l', 
+        'L', 
+        'Train l'
+    ]
+    for i, (fig, axs, v) in enumerate(zip(figs, axss, variations_pretty), -1): 
         for fn in npy_fns:
             try:
                 eps, fh = get_values(ptd+path_to_dir, fn)
@@ -72,24 +59,27 @@ def plot_trainings(path_to_dir, npy_fns, p_fn):
         if not i:
             axs[0].get_legend().remove()
             axs[1].get_legend().remove()
-        fig.suptitle(f"Loss and accuracy graph for model trained incrementally")
+        fig.suptitle(v+f"oss and accuracy graph for model trained incrementally on "+end_sup_tit, wrap=True)
         fig.set_figheight(7.5)
         axs[0].set_ylim(top=0.3)
         axs[1].set_ylim(bottom=0.86)
         axs[0].set_xlim(left=0, right=1)
         axs[1].set_xlim(left=0, right=1)
-
+    
+    if p_fn:
+        for fig,v in zip(figs, variations):
+            save_fig(base_dir+path_to_dir,p_fn+v, fig)
+    else:
+        return figs, axss
+    
+def save_figs(figs, ptd, fn):
     for fig,v in zip(figs, variations):
-        fig.tight_layout()
-        save_fig('../out_imgs/incremental_learning/'+path_to_dir,p_fn+v, fig)
+        save_fig(base_dir+ptd,fn+v, fig)
 
 def plot_training(axs, total_epochs, full_hist, label_pf, variation):
     
     ax_plot_training(axs[0], total_epochs, full_hist[:2], label_pf=label_pf, variation=variation, lsr=1)
     ax_plot_training(axs[1], total_epochs, full_hist[2:], label_pf=label_pf, variation=variation, lsr=1)
-    
-
-
 
 
 def main():
@@ -104,9 +94,29 @@ def main():
 
     p_fn = 'normalized_trained'
     dir = 'all/'
-    plot_trainings(dir, npy_fns, p_fn)
+    end_sup = 'old and new training data'
+    figs, axss = plot_trainings(npy_fns, end_sup, dir)
+    # Test
+    axss[0][0].set_ylim([0.24,0.28])
+    axss[0][1].set_ylim([0.88,0.91])
+    #Train
+    axss[2][0].set_ylim([0.16,0.25])
+    axss[2][1].set_ylim([0.89,0.935])
+    save_figs(figs, dir, p_fn)
+
     dir = 'new/'
-    plot_trainings(dir, npy_fns, p_fn)
+    end_sup = 'only new training data'
+    figs, axss = plot_trainings(npy_fns, end_sup, dir)
+    # Test
+    axss[0][0].set_ylim([0.24,0.30])
+    axss[0][1].set_ylim([0.87,0.905])
+    # All
+    axss[1][0].set_ylim([0.17,0.32])
+    axss[1][1].set_ylim([0.85,0.935])
+    #Train
+    axss[2][0].set_ylim([0.17,0.31])
+    axss[2][1].set_ylim([0.85,0.935])
+    save_figs(figs, dir, p_fn)
     
     pass
 
