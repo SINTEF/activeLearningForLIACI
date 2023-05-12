@@ -1,7 +1,7 @@
 from os import mkdir, path
 from shutil import rmtree
 from subprocess import run
-import config as cnf
+import utils.config as cnf
 from pipeline import pipeline_start
 from datetime import datetime 
 

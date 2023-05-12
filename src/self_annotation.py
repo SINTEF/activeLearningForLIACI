@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import config as cnf
+import utils.config as cnf
 from json import dump, load
 from os import path, mkdir
 from shutil import rmtree
@@ -56,6 +56,7 @@ def create_label_file():
             return
     else:
         mkdir(cnf.new_images_dir)
+        print(f'made new dir: {cnf.new_images_dir}')
 
     with open(cnf.new_images_dir + 'labels.json', 'w') as f:
         labels = get_cat_lab()
