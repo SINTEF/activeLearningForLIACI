@@ -227,8 +227,30 @@ def incrementally_uncertainty_train(X, Y, XT, YT, lr, epochs, image_budget, budg
     return eps, full_hist_0, full_hist_1, full_hist_2, full_hist_3
     
     
-        
-        
+def regular_train(X, Y, XT, YT, lr, epochs, fn):
+    # Train a new model the regular way
+    model = hullifier_create(lr=lr)
+    h, e = train(
+        model,
+        X,
+        Y,
+        batch_size=50,
+        epochs=epochs,
+        validation_data=(XT,YT),
+    )
+    
+    h = history_merge([h],[e])
+    e = np.array([e])
+
+    save_regular('npy/mean_reg/', fn, e, h)
+    printe(f'Finished training {fn} in {t()}')
+
+def save_regular(path_to_dir, file_name, e, h):
+    path = path_to_dir + file_name +'.npy'
+    print(f'Trying to save values to {path}...')
+    with open(path, 'wb') as f:
+        np.save(f, e)
+        np.save(f, h)
 
 def main():
     # Load parameters from old model
@@ -236,10 +258,6 @@ def main():
     # load old model
     params.epochs = int(params.epochs)
     params.epochs += 5
-    # params.epochs += 5
-    # params.epochs += 5
-    # params.epochs = 5
-    # params.epochs = 10
     
     # Load all the old data
     X_original, Y_original = load_from_coco()
@@ -260,6 +278,9 @@ def main():
             100, # 8
             100  # 9
         ])
+        fn = 'regular' + str(seed)
+        regular_train(X,Y, XT,YT, float(params.lr),params.epochs, fn)
+
 
         path = 'npy/mean_iut/any/'+'iut'+str(seed)+'.npy'
         eps, fh0, fh1, fh2, fh3 = incrementally_uncertainty_train(X, Y, XT, YT, float(params.lr), params.epochs, image_budget)

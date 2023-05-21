@@ -53,7 +53,7 @@ def axs_legend(axs):
 # set grid for all axes
 def axs_grid(axs):
     for ax in axs.reshape(-1):
-        ax.grid()
+        ax.grid(True)
 
 def save_fig(path, file_name, fig, tight=True):
     """ Saves fig as png and pdf """

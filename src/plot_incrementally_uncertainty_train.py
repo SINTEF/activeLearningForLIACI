@@ -87,6 +87,7 @@ def plot_fig_all(hists, eps, r_hist=None, r_eps=None, dir='', suptitle=''):
     set_max_xlim(axs[1], hists[0][0])
     axs[0].set_xlabel('Epoch')
     axs[1].set_xlabel('Epoch')
+    axs_grid(axs)
     fig.set_figheight(10)
     if suptitle:
         fig.suptitle(suptitle, wrap=True)
@@ -132,7 +133,6 @@ def plot_fig_all_train_test(hists, eps, r_hist=None, r_eps=None, dir='', suptitl
         # fig0.suptitle('Training summary for training models with MC=Monte Carlo, TI=Threshold interval, Unc=Uncertain and Crt=Non-Uncertain images', wrap=True)
     fig0.set_figheight(10)
     
-    # fig0.tight_layout()
     if dir:
         save_fig(base_path+dir, 'all_trained_train', fig0)
     fig, axs = plt.subplots(2)
@@ -318,7 +318,7 @@ def main():
 
     
     suptitle_3 = f"Loss and accuracy graph for model trained incrementally with threshold interval non-uncertain images, budget=35"
-    path_3 = 's'
+    path_3 = 'incr_crt_wiggle_trained'
     plot_fig(fh_3, eps, suptitle_3, pre_path, path_3)
 
     # Plot for all
