@@ -62,6 +62,7 @@ def compute_best_f1(predictions, threshs, Y, save_path):
     fs = np.round(f1_scores[best],4)
     p = np.round(ps[best]*100,2)
     r = np.round(rs[best]*100,2)
+    fig.set_figheight(3)
     fig.suptitle(f'F1 score evaluation, Best F1 score at $threshold={t}$,\n$F1\ score={fs}$, $precision={p}$%, $recall={r}$%')
     save_fig(save_path, 'f1_ev', fig)
     
@@ -102,16 +103,16 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
         cat_p.append(prec)
     width = 0.4
 
-    fig, axs = plt.subplots(2,2)
+    fig, axs = plt.subplots(1,2)
     x_ax = np.arange(len(f_labs))
     
-    axs[0][0].bar(x_ax-width/2,  cat_p, width=width, label='Precision')
-    axs[0][0].bar(x_ax+width/2, cat_r, width=width, label='Recall')
-    axs[0][0].set_xticks(x_ax, f_labs, rotation=-20)
+    # axs[0][0].bar(x_ax-width/2,  cat_p, width=width, label='Precision')
+    # axs[0][0].bar(x_ax+width/2, cat_r, width=width, label='Recall')
+    # axs[0][0].set_xticks(x_ax, f_labs, rotation=-20)
     
-    axs[0][0].legend()
-    axs[0][0].set_title(f'Precision & Recall\nfor each category of labels in the LIACi dataset')
-    axs[0][0].set_ylim([0,1])
+    # axs[0][0].legend()
+    # axs[0][0].set_title(f'Precision & Recall\nfor each category of labels in the LIACi dataset')
+    # axs[0][0].set_ylim([0,1])
     
     fn = 'PR_labels'
     
@@ -133,19 +134,19 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     # fig, ax = plt.subplots()
     x_ax = np.arange(predictions.shape[0])
     
-    axs[0][1].bar(0, avg_img_p, label='Precision')
-    axs[0][1].bar(1, avg_img_r, label='Recall')
+    # axs[0][1].bar(0, avg_img_p, label='Precision')
+    # axs[0][1].bar(1, avg_img_r, label='Recall')
     # axs[0][1].bar(x_ax-width/2, avg_img_p, width=width, label='Precision')
     # axs[0][1].bar(x_ax+width/2, avg_img_r, width=width, label='Recall')
     # axs[0][1].set_xticks(x_ax, f_labs, rotation=-20)
     
-    show_bar_value(axs[0][1])
-    axs[0][1].set_ylim([0,1])
-    axs[0][1].set_xticks([0,1], ['Precision', 'Recall'])
-    axs[0][0].set_ylim([0,1])
+    # show_bar_value(axs[0][1])
+    # axs[0][1].set_ylim([0,1])
+    # axs[0][1].set_xticks([0,1], ['Precision', 'Recall'])
+    # axs[0][0].set_ylim([0,1])
     
-    axs[0][1].legend()
-    axs[0][1].set_title(f'Average Precision & Recall\n for every image in the LIACi dataset')
+    # axs[0][1].legend()
+    # axs[0][1].set_title(f'Average Precision & Recall\n for every image in the LIACi dataset')
     
     fn = 'PR_frames_avg'
     # save_fig(save_path, fn, fig)
@@ -165,12 +166,12 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     # fig, ax = plt.subplots()
     x_ax = np.arange(len(f_labs))
     
-    axs[1][0].bar(x_ax-width/2,  cat_p, width=width, label='Precision')
-    axs[1][0].bar(x_ax+width/2, cat_r, width=width, label='Recall')
-    axs[1][0].set_xticks(x_ax, f_labs, rotation=-20)
-    axs[1][0].set_ylim([0,1])
-    axs[1][0].legend()
-    axs[1][0].set_title(f'Precision & Recall\nfor each category of the test images in the LIACi dataset')
+    axs[1].bar(x_ax-width/2,  cat_p, width=width, label='Precision')
+    axs[1].bar(x_ax+width/2, cat_r, width=width, label='Recall')
+    axs[1].set_xticks(x_ax, f_labs, rotation=-20)
+    axs[1].set_ylim([0,1])
+    axs[1].legend()
+    axs[1].set_title(f'Precision & Recall for each\ncategory of the test images in the LIACi dataset')
     
     # fn = 'PR_labels_test'
     # save_fig(save_path, fn, fig)
@@ -189,18 +190,18 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     # fig, ax = plt.subplots()
     x_ax = np.arange(len(f_labs))
     
-    axs[1][1].bar(x_ax-width/2,  cat_p, width=width, label='Precision')
-    axs[1][1].bar(x_ax+width/2, cat_r, width=width, label='Recall')
-    axs[1][1].set_xticks(x_ax, f_labs, rotation=-20)
+    axs[0].bar(x_ax-width/2,  cat_p, width=width, label='Precision')
+    axs[0].bar(x_ax+width/2, cat_r, width=width, label='Recall')
+    axs[0].set_xticks(x_ax, f_labs, rotation=-20)
     
-    axs[1][1].set_ylim([0,1])
-    axs[1][1].legend()
-    axs[1][1].set_title(f'Precision & Recall\nfor each category of the train images in the LIACi dataset')
+    axs[0].set_ylim([0,1])
+    axs[0].legend()
+    axs[0].set_title(f'Precision & Recall for each\ncategory of the train images in the LIACi dataset')
     
     # fn = 'PR_labels_train'
     fn = 'PR_ev'
-    fig.set_figheight(10)
-    fig.set_figwidth(10)
+    fig.set_figheight(3.5)
+    fig.set_figwidth(9)
     fig.suptitle(f"Precision and recall on the LIACI data set using $threshold={threshs[best]}$")
     save_fig(save_path, fn, fig)
 
