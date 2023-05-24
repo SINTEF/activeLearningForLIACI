@@ -9,7 +9,6 @@ threshold = 0.35
 fraction = 0.3
 wiggle_room = 0.06
 n_samples = 100
-# n_samples = 3
 n_labels = 9
 
 n_mem_frames = 2500 # Set this lower if HW is bad

@@ -1,9 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+import utils.config as cnf
 from utils.plt import show_bar_value
 from utils.utils import recall_precision
-from data import split_data
+from utils.model import hullifier_load
+from utils.plt import save_fig
+from data import split_data, load_from_coco, get_cat_lab, shuffle_data
+
 
 def f1_score(precision, recall):
     return (2 * ((precision * recall) / (precision + recall)))
@@ -30,25 +34,43 @@ def compute_best_f1(predictions, threshs, Y, save_path):
     rs = np.round(rs, 4)
     threshs = np.round(threshs, 4)
 
-    f, ax = plt.subplots()    
-    f.suptitle(f'Precision Recall Curve, Best $f_1-score$ at \n$threshold={threshs[best]}$, $f_1-score={np.round(f1_scores[best],4)}$, $precision={np.round(ps[best]*100,2)}$%, $recall={np.round(rs[best]*100,2)}$%')
-    # f.suptitle(f'Precision Recall Curve\nBest $f_1-score$ at $thres={threshs[best]}$')
-    ax.plot(ps,rs, label='Precision Recall Curve')
-    ax.scatter(ps[best],rs[best], label='Best $f_1-score$',c='r')
-    ax.set_ylabel('Precision')
-    ax.set_xlabel('Recall')
+    fig, ax = plt.subplots(1,2)    
+
+    ax[0].plot(threshs, f1_scores, label='F1 scores')
+    ax[0].axhline(f1_scores[best], label='F1 score maxima', c='r', linestyle='dashed')
+    ax[0].axvline(threshs[best], c='r', linestyle='dashed')
+
+    ax[0].set_ylabel('F1 score')
+    ax[0].set_xlabel('Activation threshold')
+    ax[0].set_ylim([0,1])
+    ax[0].set_xlim([0,1])
+    ax[0].grid(True)
+    ax[0].legend()
+    ax[0].set_title('F1 score graph')
+
     
-    ax.grid(True)
-    ax.legend()
-    f.tight_layout()
-    f.savefig(save_path+'prec_reca_curve.png')
-    f.savefig(save_path+'pdfs/prec_reca_curve.pdf')
+    ax[1].set_title(f'Precision Recall Curve')
+    # f.suptitle(f'Precision Recall Curve\nBest $f_1-score$ at $thres={threshs[best]}$')
+    ax[1].plot(ps,rs, label='Precision Recall Curve')
+    ax[1].scatter(ps[best],rs[best], label='Best $F1\ score$',c='r')
+    ax[1].set_ylabel('Precision')
+    ax[1].set_xlabel('Recall')
+    ax[1].grid(True)
+    ax[1].legend()
+
+    fig.suptitle(
+        f'F1 score evaluation, Best $F1\\ score$ at $threshold={threshs[best]}$, $F1\\ score={np.round(f1_scores[best],4)}$, $precision={np.round(ps[best]*100,2)}$%, $recall={np.round(rs[best]*100,2)}$%', wrap=True
+    )
+    save_fig(save_path, 'f1_ev', fig)
+    
     return best
+
+# Computes the F1 score
 def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     x, y, xt, yt = split_data(predictions, Y, split)
-    thresh_start = 0.05
-    thresh_end = 0.96
-    thresh_step = 0.05
+    thresh_start = 0.01
+    thresh_end = 1.0
+    thresh_step = 0.01
 
     params = f'$thresh\ start={thresh_start}$, $thres\ end={thresh_end}$, $thresh\ step={thresh_step}$\n'
     for k,v in kwargs.items():
@@ -90,7 +112,7 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     f.tight_layout()
     
     f.savefig(save_path + 'PR_labels.png')
-    f.savefig(save_path + 'pdfs/PR_labels.pdf')
+    f.savefig(save_path + 'pdf/PR_labels.pdf')
     plt.close()
     # return
     # exit()
@@ -124,7 +146,7 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     f.tight_layout()
     
     f.savefig(save_path + 'PR_frames_avg.png')
-    f.savefig(save_path + 'pdfs/PR_frames_avg.pdf')
+    f.savefig(save_path + 'pdf/PR_frames_avg.pdf')
 
     # Compute r/p for category among the test images 
     cat_r = []
@@ -150,14 +172,13 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     f.tight_layout()
     
     f.savefig(save_path + 'PR_labels_test.png')
-    f.savefig(save_path + 'pdfs/PR_labels_test.pdf')
+    f.savefig(save_path + 'pdf/PR_labels_test.pdf')
 
     # Compute r/p for category among the train images 
     cat_r = []
     cat_p = []
             
-    print(y.shape)
-    print(TP_table[:y.shape[0]].shape)
+    
     for pred, cat_tp, t in zip(x.T, TP_table[:y.shape[0]].T, y.T):
         rec, prec = recall_precision(pred, cat_tp, t)
         cat_r.append(rec)
@@ -176,92 +197,20 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     f.tight_layout()
     
     f.savefig(save_path + 'PR_labels_train.png')
-    f.savefig(save_path + 'pdfs/PR_labels_train.pdf')
+    f.savefig(save_path + 'pdf/PR_labels_train.pdf')
 
-def eval_dataset(predictions, truth, split, save_path, labels):
-    x, y, xt, yt = split_data(predictions, truth, split)
-    n_labels = truth.sum()
 
-    img_per_cat = [ int(c.sum()) for c in truth.T ]
-    img_per_train_cat = [ int(c.sum()) for c in y.T ]
-    img_per_test_cat = [ int(c.sum()) for c in yt.T ]
 
-    labels = [l.replace('_', '\n') for l in labels] # Format labels print pretty
-    offset = 0.8 / 3
-    # Whole dataset
-    f, ax = plt.subplots()
-    f.suptitle('Number of images for each class in the whole LIACi dataset')
-    x_ax = np.arange(len(labels))    
-    ax.grid(True)
-    
-    ax.bar(x_ax-offset, img_per_cat, width=offset, label='All images')
-    ax.bar(x_ax, img_per_train_cat, width=offset, label='Train images')
-    ax.bar(x_ax+offset, img_per_test_cat, width=offset, label='Test images')
-    
-    # Show bar value for every bar in the plot
-    show_bar_value(ax)
-        
-    ax.set_xticks(x_ax, labels, rotation=-20)
 
-    ax.set_ylabel('Number of images in each class')
-    ax.set_xlabel('Labels')
-    ax.legend()
-    f.tight_layout()
-    f.savefig(save_path+'dataset_stats.png')
-    # print(save_path+'pdfs/dataset_stats.pdf')
-    f.savefig(save_path+'pdfs/dataset_stats.pdf')
+if __name__ == "__main__":
+    pass
+    X, Y = load_from_coco()
+    X, Y = shuffle_data(X, Y)
+    model = hullifier_load(cnf.model_path)
+    predictions = model.predict(X)
 
-    # Test dataset
-    f, ax = plt.subplots()
-    f.suptitle('Number of images for each class in the\ntest part of the LIACi dataset')
-    
-    ax.grid(True)
+    labels = get_cat_lab()
 
-    bar = ax.bar(x_ax, img_per_test_cat, label='Test images')
-    ax.bar_label(bar)
-    # Show bar value for every bar in the plot
-    show_bar_value(ax)
-        
-    ax.set_xticks(x_ax, labels, rotation=-20)
-
-    ax.set_ylabel('Number of images in each class')
-    ax.set_xlabel('Labels')
-    ax.legend()
-    f.tight_layout()
-    
-    f.savefig(save_path+'dataset_test_stats.png')
-    f.savefig(save_path+'pdfs/dataset_test_stats.pdf')
-
-    # Show ratio of images
-    # Calculate ratio for all, train, test
-    n_imgs = sum(img_per_cat)
-    img_per_cat = [np.round(im / n_imgs, 2) for i, im in enumerate(img_per_cat)]
-    
-    n_imgs = sum(img_per_train_cat)
-    img_per_train_cat = [np.round(im / n_imgs, 2) for i, im in enumerate(img_per_train_cat)]
-    
-    n_imgs = sum(img_per_test_cat)
-    img_per_test_cat = [np.round(im / n_imgs, 2) for i, im in enumerate(img_per_test_cat)]
-        
-    f, ax = plt.subplots()
-    f.suptitle('Partitioning of images for each class in the LIACi dataset')
-    x_ax = np.arange(len(labels))    
-    ax.grid(True)
-    
-    ax.bar(x_ax-offset, img_per_cat, width=offset, label='All images')
-    ax.bar(x_ax, img_per_train_cat, width=offset, label='Train images')
-    ax.bar(x_ax+offset, img_per_test_cat, width=offset, label='Test images')
-    
-    # Show bar value for every bar in the plot
-    # show_bar_value(ax)
-        
-    ax.set_xticks(x_ax, labels, rotation=-20)
-
-    ax.set_ylabel('Partitioning of images in each class')
-    ax.set_xlabel('Labels')
-    ax.legend()
-    f.tight_layout()
-    f.savefig(save_path+'dataset_ratio_stats.png')
-    f.savefig(save_path+'pdfs/dataset_ratio_stats.pdf')
-
-    return
+    path = '../out_imgs/f1/base/'
+    print('Computing acc')
+    show_acc(predictions, Y, labels, 0.1, path)
