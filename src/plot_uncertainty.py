@@ -61,7 +61,7 @@ def plot_im_tl_ms_pdf(sample_data, b_preds, preds, axs):
 
     x_prog = np.arange(mu_prog.shape[1])
 
-    axs[0].axvline(cnf.threshold, c='red', linestyle='dashed')
+    axs[0].axvline(cnf.threshold, label="Activation threshold", c='red', linestyle='dashed')
     for label, mu, std, mp, sp, p in zip(an_labels, pdf_mus, pdf_sigs, mu_prog, sig_prog, preds):        
         # if not std.round(3) == 0:
         plot_pdf(mu, std, p, label, axs[0])
