@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-
+from sys import argv
 import utils.config as cnf
 from utils.plt import show_bar_value
 from utils.utils import recall_precision
@@ -13,6 +13,7 @@ def f1_score(precision, recall):
     return (2 * ((precision * recall) / (precision + recall)))
 
 def compute_best_f1(predictions, threshs, Y, save_path):
+    # predictions
     predictions = [np.where(thresh <= predictions, 1, 0) for thresh in threshs]
     
     ps = []
@@ -71,6 +72,7 @@ def compute_best_f1(predictions, threshs, Y, save_path):
 # Computes the F1 score
 def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     x, y, xt, yt = split_data(predictions, Y, split)
+
     thresh_start = 0.01
     thresh_end = 1.0
     thresh_step = 0.01
@@ -84,7 +86,7 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
 
     threshs = np.arange(thresh_start, thresh_end, thresh_step) 
     
-    best = compute_best_f1(predictions.copy(), threshs, Y, save_path)
+    best = compute_best_f1(xt.copy(), threshs, yt, save_path)
     predictions = np.where(threshs[best] <= predictions, 1, 0)
 
     TP_table = np.logical_and(predictions,Y)
@@ -104,59 +106,10 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     width = 0.4
 
     fig, axs = plt.subplots(1,2)
-    x_ax = np.arange(len(f_labs))
-    
-    # axs[0][0].bar(x_ax-width/2,  cat_p, width=width, label='Precision')
-    # axs[0][0].bar(x_ax+width/2, cat_r, width=width, label='Recall')
-    # axs[0][0].set_xticks(x_ax, f_labs, rotation=-20)
-    
-    # axs[0][0].legend()
-    # axs[0][0].set_title(f'Precision & Recall\nfor each category of labels in the LIACi dataset')
-    # axs[0][0].set_ylim([0,1])
-    
-    fn = 'PR_labels'
-    
-    # save_fig(save_path, fn, fig)
-    # return
-    # exit()
-    
-    # Compute average r/p for each image
-    img_r = []
-    img_p = []
-    for pred, img_tp, t in zip(predictions, TP_table, Y):
-        rec, prec = recall_precision(pred, img_tp, t)
-        img_r.append(rec)
-        img_p.append(prec)
-    avg_img_r = round(sum(img_r)/len(img_r),4)
-    avg_img_p = round(sum(img_p)/len(img_p),4)
-    
-
-    # fig, ax = plt.subplots()
-    x_ax = np.arange(predictions.shape[0])
-    
-    # axs[0][1].bar(0, avg_img_p, label='Precision')
-    # axs[0][1].bar(1, avg_img_r, label='Recall')
-    # axs[0][1].bar(x_ax-width/2, avg_img_p, width=width, label='Precision')
-    # axs[0][1].bar(x_ax+width/2, avg_img_r, width=width, label='Recall')
-    # axs[0][1].set_xticks(x_ax, f_labs, rotation=-20)
-    
-    # show_bar_value(axs[0][1])
-    # axs[0][1].set_ylim([0,1])
-    # axs[0][1].set_xticks([0,1], ['Precision', 'Recall'])
-    # axs[0][0].set_ylim([0,1])
-    
-    # axs[0][1].legend()
-    # axs[0][1].set_title(f'Average Precision & Recall\n for every image in the LIACi dataset')
-    
-    fn = 'PR_frames_avg'
-    # save_fig(save_path, fn, fig)
-
     # Compute r/p for category among the test images 
     cat_r = []
     cat_p = []
             
-    # print(TP_table[yt.shape[0]:].shape)
-    # print(TP_table[-yt.shape[0]:].shape)
     for pred, cat_tp, t in zip(xt.T, TP_table[-yt.shape[0]:].T, yt.T):
         rec, prec = recall_precision(pred, cat_tp, t)
         cat_r.append(rec)
@@ -192,7 +145,7 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     
     axs[0].bar(x_ax-width/2,  cat_p, width=width, label='Precision')
     axs[0].bar(x_ax+width/2, cat_r, width=width, label='Recall')
-    axs[0].set_xticks(x_ax, f_labs, rotation=-20)
+    axs[0].set_xticks(x_ax, f_labs, rotation=-25)
     
     axs[0].set_ylim([0,1])
     axs[0].legend()
@@ -200,9 +153,9 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
     
     # fn = 'PR_labels_train'
     fn = 'PR_ev'
-    fig.set_figheight(3.5)
+    fig.set_figheight(3)
     fig.set_figwidth(9)
-    fig.suptitle(f"Precision and recall on the LIACI data set using $threshold={threshs[best]}$")
+    fig.suptitle(f"Precision and recall on the LIACI data set using $threshold={np.round(threshs[best],2)}$")
     save_fig(save_path, fn, fig)
 
 
@@ -210,9 +163,11 @@ def show_acc(predictions, Y, labels, split, save_path='', **kwargs):
 
 if __name__ == "__main__":
     pass
-    X, Y = load_from_coco()
+    argv
+    X, Y = load_from_coco() 
     X, Y = shuffle_data(X, Y)
     model = hullifier_load(cnf.model_path)
+    
     predictions = model.predict(X)
 
     labels = get_cat_lab()
