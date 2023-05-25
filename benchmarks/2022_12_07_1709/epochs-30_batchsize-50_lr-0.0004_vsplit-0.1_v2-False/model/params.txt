@@ -1,5 +1,5 @@
 lr=0.0004
-epochs=30
+epochs=35
 v_split=0.1
 v2=False
 seed=0

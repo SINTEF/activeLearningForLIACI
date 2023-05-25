@@ -257,7 +257,6 @@ def main():
     params = get_dict_from_file(cnf.model_path + 'params.txt')
     # load old model
     params.epochs = int(params.epochs)
-    params.epochs += 5
     
     # Load all the old data
     X_original, Y_original = load_from_coco()
