@@ -59,14 +59,12 @@ def plot_f1_scores(path, model_names, m_preds, xt, yt):
     axs[1].set_xlabel('Recall')
     axs[1].grid(True)
     axs[1].legend()
-    
-    # t = threshs[best]
-    # fs = np.round(f1_scrs[best],4)
-    # p = np.round(ps[best]*100,2)
-    # r = np.round(rs[best]*100,2)
-    # fig.set_figheight(3)
-    fig.suptitle(f'F1 score evaluation'+ (' for models with a budget' if path=='budget/' else '')+',\nmcu=Monte Carlo uncertain, mcc=Monte Carlo non-uncertain, tiu=Threshold interval uncertain, tic=Threshold interval non-uncertain', wrap=True)
+
+    old_height = fig.get_figheight()
+    fig.set_figheight(4)
+    fig.suptitle(f'F1 score evaluation'+ (' for models with a budget' if path =='budget/' else '')+',\nmcu=Monte Carlo uncertain, mcc=Monte Carlo non-uncertain, tiu=Threshold interval uncertain, tic=Threshold interval non-uncertain', wrap=True)
     save_fig(base_dir+path,'f1_ev', fig)
+    fig.set_figheight(old_height)
 
     return fig, axs
 
