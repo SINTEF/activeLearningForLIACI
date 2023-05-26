@@ -64,6 +64,12 @@ def save_fig(path, file_name, fig, tight=True):
 
 def set_max_xlim(ax, x, min=0):
     ax.set_xlim(left=min, right=len(x)+1)
+    
+def hline2pt(ax, y, xmax=1, xmin=0, **kwargs):
+    ax.plot([xmin, xmax], [y, y], **kwargs)
+
+def vline2pt(ax, x, ymax=1, ymin=0, **kwargs):
+    ax.plot([x, x], [ymin, ymax], **kwargs)
 
 def plot_seperate_epochs(epochs, axs):
     cum_e = np.cumsum(epochs)

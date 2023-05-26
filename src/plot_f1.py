@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 from data import load_from_coco, shuffle_data, split_data
 from f1_score import f1_scores
 from utils.model import hullifier_load
-from utils.plt import save_fig
+from utils.plt import save_fig, hline2pt, vline2pt
+
 
 base_dir = '../out_imgs/f1/'
 
@@ -39,17 +40,20 @@ def plot_f1_scores(path, model_names, m_preds, yt):
 
         axs[0].plot(threshs, f1_scrs, label=mn)
         color = axs[0].lines[-1].get_color() # get color from last plot
-        axs[0].axhline(f1_scrs[best], label=f'Best $F1$ {f1_scrs[best]}', linestyle='dashed', c=color)
-        axs[0].axvline(threshs[best], linestyle='dashed', c=color)
+        # axs[0].plot([0,threshs[best]], [f1_scrs[best], f1_scrs[best]], label=f'Best $F1$ {f1_scrs[best]}', linestyle='dashed', c=color) #hline
+        # axs[0].plot([threshs[best],threshs[best]], [0,f1_scrs[best]], linestyle='dashed', c=color) # vline
+        vline2pt(axs[0], threshs[best], ymax=f1_scrs[best], label=f'Best $F1$ {f1_scrs[best]}', linestyle='dashed', c=color) #hline
+        hline2pt(axs[0], f1_scrs[best], xmax=threshs[best], linestyle='dashed', c=color) # vline
 
-        axs[1].plot(ps, rs, label=mn)
-        axs[1].scatter(ps[best],rs[best], label='Best $F1$ ')
 
-    # plt.rcParams.update({'font.size': 20})
+        axs[1].plot(rs, ps, label=mn)
+        axs[1].scatter(rs[best],ps[best], label='Best $F1$ ')
+
     axs[0].set_ylabel('F1 score')
     axs[0].set_xlabel('Classification threshold')
     axs[0].set_ylim([0,1])
     axs[0].set_xlim([0,1])
+    
     axs[0].grid(True)
     axs[0].legend()
     axs[0].set_title('F1 score graphs')
@@ -98,8 +102,8 @@ def main():
     axs[0].set_xlim([0.2,0.63])
     axs[0].set_ylim([0.78,0.85])
 
-    axs[1].set_xlim([0.77,0.9])
-    axs[1].set_ylim([0.65,0.84])
+    axs[1].set_xlim([0.65, 0.84])
+    axs[1].set_ylim([0.77, 0.9])    
     save_fig(base_dir+version,'zoom_f1_ev', fig)
 
     version='any/'
@@ -107,8 +111,8 @@ def main():
     axs[0].set_xlim([0.2,0.63])
     axs[0].set_ylim([0.78,0.85])
 
-    axs[1].set_xlim([0.77,0.9])
-    axs[1].set_ylim([0.65,0.84])
+    axs[1].set_xlim([0.65, 0.84])
+    axs[1].set_ylim([0.77, 0.9])
     save_fig(base_dir+version,'zoom_f1_ev', fig)
     
     
