@@ -12,8 +12,7 @@ from data import split_data, load_from_coco, get_cat_lab, shuffle_data
 def f1_score(precision, recall):
     return (2 * ((precision * recall) / (precision + recall)))
 
-def compute_best_f1(predictions, threshs, Y, save_path):
-    # predictions
+def f1_scores(predictions, threshs, Y):
     predictions = [np.where(thresh <= predictions, 1, 0) for thresh in threshs]
     
     ps = []
@@ -26,19 +25,28 @@ def compute_best_f1(predictions, threshs, Y, save_path):
         
     ps = np.array(ps)
     rs = np.array(rs)
+    f1_scrs = f1_score(ps, rs)
+    return f1_scrs, ps,rs
 
-    f1_scores = f1_score(ps, rs)
+
+def compute_best_f1(predictions, threshs, Y, save_path=''):
+    # predictions
     
-    best = np.argmax(f1_scores)
-    f1_scores = np.round(f1_scores, 4)
+
+    f1_scrs = f1_scores(predictions,threshs, Y)
+    
+    best = np.argmax(f1_scrs)
+    f1_scrs = np.round(f1_scrs, 4)
     ps = np.round(ps, 4)
     rs = np.round(rs, 4)
     threshs = np.round(threshs, 4)
 
+    if not save_path:
+        return f1_scrs
     fig, ax = plt.subplots(1,2)    
 
-    ax[0].plot(threshs, f1_scores, label='F1 scores')
-    ax[0].axhline(f1_scores[best], label='F1 score maxima', c='r', linestyle='dashed')
+    ax[0].plot(threshs, f1_scrs, label='F1 scores')
+    ax[0].axhline(f1_scrs[best], label='F1 score maxima', c='r', linestyle='dashed')
     ax[0].axvline(threshs[best], c='r', linestyle='dashed')
 
     ax[0].set_ylabel('F1 score')
@@ -60,11 +68,13 @@ def compute_best_f1(predictions, threshs, Y, save_path):
     ax[1].legend()
     
     t = threshs[best]
-    fs = np.round(f1_scores[best],4)
+    fs = np.round(f1_scrs[best],4)
     p = np.round(ps[best]*100,2)
     r = np.round(rs[best]*100,2)
     fig.set_figheight(3)
     fig.suptitle(f'F1 score evaluation, Best F1 score at $threshold={t}$,\n$F1\ score={fs}$, $precision={p}$%, $recall={r}$%')
+
+
     save_fig(save_path, 'f1_ev', fig)
     
     return best
@@ -169,6 +179,7 @@ if __name__ == "__main__":
     model = hullifier_load(cnf.model_path)
     
     predictions = model.predict(X)
+    
 
     labels = get_cat_lab()
 
