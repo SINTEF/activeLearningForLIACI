@@ -72,8 +72,8 @@ def plot_version(version, X, Y):
     _,_,xt,yt = split_data(X,Y, 0.1)
     mcu = 'MC Unc'
     mcc = 'MC Crt'
-    tiu = 'TI Crt'
-    tic = 'TI Unc'
+    tiu = 'TI Unc'
+    tic = 'TI Crt'
     
 
     model_names = [
