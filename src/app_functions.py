@@ -16,9 +16,10 @@ import os
 from time import time 
 
 from utils.file import get_dict_from_file
-from utils.uncertainty import find_uncertainty
-from utils.model import train, hullifier_load
+from utils.uncertainty import find_uncertainty, get_feature_extractor
+from utils.model import train, hullifier_load, preproc_model_create, get_lr, classifier_create, hullifier_compile
 import utils.config as cnf
+from model import hullifier_clone
 
 from self_annotation import add_annotated_im, load_from_user_ann
 from data import get_cat_lab, load_from_coco, shuffle_data, split_data
@@ -63,7 +64,8 @@ def generate_label_alerts():
 
 class AppFunc:
     def __init__(self, model_path=cnf.model_path):
-        self.model = hullifier_load(model_path, resize=False)
+        # self.model = hullifier_load(model_path, resize=False)
+        self.model = hullifier_clone()
         self.labels = get_cat_lab()
         self.tmp_path = cnf.tmp_dir
 
@@ -140,6 +142,19 @@ class AppFunc:
         
     def get_fig_path(self):
         return self.fig_path
+
+    def get_classifier(self):
+        lr = get_lr(self.model)
+
+        # Create classifier
+        classifier = classifier_create(dr_rate=0.1)
+        hullifier_compile(classifier, lr) # Compile
+        classifier.build((None, 7, 7, 1024)) # and Build
+
+        classifier.set_weights(self.model.get_weights()[-len(classifier.get_weights()):]) # Set current models weights
+
+        return classifier
+
     def create_im_from_pred(self, pred, write=False):
 
         figaro = px.imshow(pred.transpose(), aspect=100)
@@ -155,27 +170,43 @@ class AppFunc:
 
         if write:
             figaro.write_image(self.fig_path)
-        print(f"Figaro {type(figaro)}")
+        # print(f"Figaro {type(figaro)}")
         return figaro
+    def get_pp_fe_clsf(self): 
+
+        pre_proc = preproc_model_create()
+        f_ext = get_feature_extractor(self.model)
+        classifier = self.get_classifier()
+        
+        return pre_proc, f_ext, classifier        
 
     def find_uncertainties(self):
-        uncertainties = np.empty(self.tnf, self.labels.shape[0])
-        
+        uncertainties = np.zeros((self.tnf, len(self.labels)))
+        if cnf.unc_type =='MC':
+            pp, fe, cf = self.get_pp_fe_clsf()
         s = time()
         self.vid.set(cv2.CAP_PROP_POS_FRAMES, 0) # make sure video is set to idx=0
-        for i in tqdm(range(self.tnf, step=int(self.fps))):
-            self.vid.self.vid.set(cv2.CAP_PROP_POS_FRAMES, i)
-            succ, im = self.vid.read()
-            if not succ or self.predictions_bool[i].sum() == 0:
-                uncertainties[i] = np.zeros(self.labels.shape[0])
+        for i in tqdm(range(0, self.tnf, cnf.mc_step)):
+            if cnf.unc_type =='MC':
+                # self.vid.set(cv2.CAP_PROP_POS_FRAMES, i)
+                succ, im = self.vid.read()
+                if not succ or self.predictions_bool[i].sum() == 0:
+                    uncertainties[i] = np.zeros(cnf.n_labels)
+                else:
+                    im = cv2.resize(im, (224,224)).astype(np.uint8)
+                    uncertainties[i] = find_uncertainty(im, self.predictions_bool[i], pp, fe, cf)
+
+            elif cnf.unc_type == "TI":
+                uncertainties[i] = np.where(np.abs(self.predictions[i] - cnf.threshold) <= cnf.wiggle_room, True, False)
             else:
-                im = cv2.resize(im, (224,224)).astype(np.uint8)
-                uncertainties[i] = find_uncertainty(im, self.predictions_bool[i], self.model)
+                printe("uncertainty type not available...")
+                exit(-1)
 
         tm = int(time()-s)
         printc(f'Used {tm//60}m {tm%60}s')
 
         return uncertainties
+    
 
 
     def create_timelines(self, path):
@@ -228,35 +259,47 @@ class AppFunc:
         return succ, im
         
     def incremental_train(self):
-        return
+        # return
         params = get_dict_from_file(cnf.model_path + 'params.txt')
 
-        ef = 1/5 # Epoch fraction
+        
         seed = 0
 
-        epochs = int(int(params['epochs']) * ef)
+        epochs = int(int(params.epochs) * cnf.fraction)
 
-        X1, Y1 = load_from_coco()
-        X2, Y2 = load_from_user_ann()
+        X, Y = load_from_coco()
 
-        X = np.concatenate((X1,X2))
-        Y = np.concatenate((Y1,Y2))
-        
         X, Y = shuffle_data(X,Y,seed)
-        X, Y , XT, YT = split_data(X, Y, 0.2)
+        X, Y , XT, YT = split_data(X, Y, 0.1)
 
-        # print('check prediction')
-        a = self.model.evaluate(X,Y)
-        # print(a)
+        X2, Y2 = load_from_user_ann()
+        
+        X = np.concatenate((X,X2))
+        Y = np.concatenate((Y,Y2))
+        
+        
 
-        h, e = train(self.model, X, Y, (XT, YT))
-        summarize_diagnostics(h,e)
-        # print(h.history)
-        # print('here')
-        # print(np.round(h.history['binary_accuracy'], 3))
-        # print(np.round(h.history['val_binary_accuracy'], 3))
-        # print(h.history['val_binary_accuracy'])
-        # summarize_diagnostics(h,e,path)
+        print("Before incremental training")
+        print('Evalute train')
+        lnba = self.model.evaluate(X,Y)
+        print('Train loss & bin acc')
+        print(lnba)
+        print('Evalute test')
+        lnba = self.model.evaluate(XT,YT)
+        print('Test loss & bin acc')
+        print(lnba)
+
+        h, e = train(self.model, X, Y, (XT, YT), epochs=epochs)
+        print("After incremental training")
+        print('Evalute train')
+        lnba = self.model.evaluate(X,Y)
+        print('Train loss & bin acc')
+        print(lnba)
+        print('Evalute test')
+        lnba = self.model.evaluate(XT,YT)
+        print('Test loss & bin acc')
+        print(lnba)
+
         
 
 

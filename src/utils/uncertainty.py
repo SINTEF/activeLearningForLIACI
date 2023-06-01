@@ -6,7 +6,7 @@ import utils.config as cnf
 
 
 
-# Evaluates single image
+# Evaluates single image for monte carlo
 def find_uncertainty(image, b_preds, pre_proc, feature_extractor, classifier):
     """ Return shape (n_labels) with uncertain labels as true  """
 

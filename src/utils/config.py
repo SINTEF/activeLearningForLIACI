@@ -11,4 +11,10 @@ wiggle_room = 0.06
 n_samples = 100
 n_labels = 9
 
+mc_step = 1 # step rate for mc dropout, turn up if mc takes too much time
+
+# Comment in the one you want to use
+unc_type = 'MC' # Monte Carlo dropout
+# unc_type = 'TI' # Threshold interval
+
 n_mem_frames = 2500 # Set this lower if HW is bad
